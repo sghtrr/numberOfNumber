@@ -15,6 +15,22 @@ let gameStarted = false;
 let positions = [];
 let touchTimer = null;
 let backgroundImage = null;
+let customFont = null;
+
+// 加载自定义字体
+const loadCustomFont = () => {
+  try {
+    // 微信小游戏中 loadFont 直接传入字体路径字符串
+    wx.loadFont('./font/caveat/caveatbrush-regular.ttf');
+    customFont = 'Caveat Brush';
+    console.log('字体加载成功');
+    drawGame(); // 重新绘制游戏界面
+  } catch (err) {
+    console.error('字体加载失败:', err);
+    customFont = 'sans-serif'; // 加载失败时使用默认字体
+    drawGame();
+  }
+};
 
 // 加载背景图片
 const loadBackgroundImage = () => {
@@ -187,19 +203,19 @@ function drawGame() {
   const seconds = (elapsed % 60).toString().padStart(2, '0');
   const timeStr = `${minutes}:${seconds}`;
 
-  ctx.font = '26px sans-serif';
+  ctx.font = `26px ${customFont || 'sans-serif'}`;
   ctx.fillStyle = '#333';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   ctx.fillText(timeStr, 15, TOP_BAR_HEIGHT / 2);
 
   // 绘制下一个要选择的数字
-  ctx.font = 'bold 28px sans-serif';
+  ctx.font = `bold 28px ${customFont || 'sans-serif'}`;
   ctx.textAlign = 'center';
   ctx.fillText(`${currentNumber}`, SCREEN_WIDTH / 2, TOP_BAR_HEIGHT / 2);
 
   // 绘制数字
-  ctx.font = '15px sans-serif';
+  ctx.font = `20px ${customFont || 'sans-serif'}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
@@ -288,5 +304,6 @@ wx.onTouchStart((e) => {
 });
 
 // 初始化游戏
+loadCustomFont(); // 先加载自定义字体
 loadBackgroundImage();
 initGame();
