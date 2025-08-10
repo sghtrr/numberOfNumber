@@ -28,9 +28,9 @@ const loadBackgroundImage = () => {
 // 初始化游戏
 function initGame() {
   // 生成1-100的有序数组
-  const unShufflednumbers = Array.from({length: NUMBER_COUNT}, (_, i) => i + 1);
-  const numbers = shuffleArray(unShufflednumbers);
-
+  const unShufflednumbers = Array.from({length: NUMBER_COUNT}, (_, i) => i + 1); 
+  const numbers = (unShufflednumbers); 
+  
   // 计算随机位置（使用优化的均匀分布算法）
   positions = [];
   
@@ -44,21 +44,51 @@ function initGame() {
   const cellWidth = availableWidth / cols;
   const cellHeight = availableHeight / rows;
   
+  // 生成随机偏移因子（使每次游戏布局不同）
+  const randomOffsetFactor = Math.random() * 0.3 + 0.7; // 0.7-1.0之间的随机因子
+  
   // 在网格单元内随机放置数字
   for (let i = 0; i < numbers.length; i++) {
     const row = Math.floor(i / cols);
     const col = i % cols;
     
-    // 在网格单元内随机偏移（确保间距）
-    const x = col * cellWidth + cellWidth * 0.5 + (Math.random() - 0.5) * (cellWidth - MIN_SPACING);
-    const y = TOP_BAR_HEIGHT + row * cellHeight + cellHeight * 0.5 + (Math.random() - 0.5) * (cellHeight - MIN_SPACING);
+    // 网格单元基础位置
+    const baseX = col * cellWidth;
+    const baseY = row * cellHeight;
     
+    // 添加更大幅度的随机偏移（同时确保间距）
+    const offsetX = Math.random() * (cellWidth - MIN_SPACING) * randomOffsetFactor;
+    const offsetY = Math.random() * (cellHeight - MIN_SPACING) * randomOffsetFactor;
+    
+    // 最终位置（使用更动态的计算方式）
+    const x = Math.max(15, Math.min(availableWidth - 15, baseX + cellWidth * 0.2 + offsetX));
+    const y = TOP_BAR_HEIGHT + Math.max(15, Math.min(availableHeight - 15, baseY + cellHeight * 0.2 + offsetY));
+    
+    // 添加轻微扰动使分布更自然
     positions.push({
-      x: Math.max(20, Math.min(SCREEN_WIDTH - 20, x)),
-      y: Math.max(TOP_BAR_HEIGHT + 20, Math.min(SCREEN_HEIGHT - 20, y)),
+      x: x + (Math.random() - 0.5) * 10, // ±5像素扰动
+      y: y + (Math.random() - 0.5) * 10, // ±5像素扰动
       number: numbers[i],
       found: false
     });
+  }
+
+  // 对数字位置进行微调避免重叠（二次检查）
+  for (let i = 0; i < positions.length; i++) {
+    for (let j = i + 1; j < positions.length; j++) {
+      const dx = positions[i].x - positions[j].x;
+      const dy = positions[i].y - positions[j].y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      if (distance < MIN_SPACING) {
+        // 移动位置使间距足够
+        const moveDist = (MIN_SPACING - distance) / 2;
+        positions[i].x += moveDist * (dx / distance);
+        positions[i].y += moveDist * (dy / distance);
+        positions[j].x -= moveDist * (dx / distance);
+        positions[j].y -= moveDist * (dy / distance);
+      }
+    }
   }
 
   drawGame();
@@ -75,7 +105,7 @@ function drawHandDrawnCircle(x, y, color) {
   for (let i = 0; i < 8; i++) {
     const angle = i * (Math.PI * 2) / 8;
     // 添加轻微不规则性
-    const offset = Math.random() * 2 - 1;
+    const offset = Math.random() * 3 - 1.5; // ±1.5像素扰动
     points.push({
       x: x + Math.cos(angle) * (radius + offset),
       y: y + Math.sin(angle) * (radius + offset)
@@ -83,15 +113,16 @@ function drawHandDrawnCircle(x, y, color) {
   }
   
   // 使用二次贝塞尔曲线连接点
-  for (let i = 0; i < points.length; i++) {
-    const next = points[(i + 1) % points.length];
-    if (i === 0) {
-      ctx.moveTo(points[i].x, points[i].y);
-    }
-    const cpx = (points[i].x + next.x) / 2;
-    const cpy = (points[i].y + next.y) / 2;
-    ctx.quadraticCurveTo(cpx, cpy, next.x, next.y);
+  ctx.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length; i++) {
+    const prev = points[i - 1];
+    const current = points[i];
+    const cpx = (prev.x + current.x) / 2;
+    const cpy = (prev.y + current.y) / 2;
+    
+    ctx.quadraticCurveTo(prev.x, prev.y, cpx, cpy);
   }
+  ctx.quadraticCurveTo(points[points.length - 1].x, points[points.length - 1].y, points[0].x, points[0].y);
   
   ctx.closePath();
   ctx.strokeStyle = color;
@@ -188,14 +219,14 @@ function endGame() {
   });
 }
 
-// 随机打乱数组
-function shuffleArray(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]]; // 交换元素
-  }
-  return array;
-}
+// 随机打乱数组 
+function shuffleArray(array) { 
+  for (let i = array.length - 1; i > 0; i--) { 
+    const j = Math.floor(Math.random() * (i + 1)); 
+    [array[i], array[j]] = [array[j], array[i]]; // 交换元素 
+  } 
+  return array; 
+} 
 
 // 触摸事件处理
 wx.onTouchStart((e) => {
