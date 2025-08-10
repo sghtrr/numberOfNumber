@@ -4,7 +4,7 @@ const SCREEN_WIDTH = systemInfo.windowWidth;
 const SCREEN_HEIGHT = systemInfo.windowHeight;
 const TOP_BAR_HEIGHT = 60;
 const NUMBER_COUNT = 100;
-const MIN_SPACING = 20; // 减小最小间距
+const MIN_SPACING = 30; // 数字间最小间距
 
 let canvas = wx.createCanvas();
 let ctx = canvas.getContext('2d');
@@ -15,7 +15,7 @@ let positions = [];
 let touchTimer = null;
 let backgroundImage = null;
 
-// 加载背景图片的正确方法
+// 加载背景图片
 const loadBackgroundImage = () => {
   const img = wx.createImage();
   img.onload = () => {
@@ -30,109 +30,88 @@ function initGame() {
   // 生成1-100的有序数组
   const numbers = Array.from({length: NUMBER_COUNT}, (_, i) => i + 1);
   
-  // 计算随机位置（使用优化的碰撞检测算法）
+  // 计算随机位置（使用优化的均匀分布算法）
   positions = [];
   
   // 计算可用区域
   const availableWidth = SCREEN_WIDTH;
   const availableHeight = SCREEN_HEIGHT - TOP_BAR_HEIGHT;
   
-  for (let num of numbers) {
-    let position = null;
-    let attempts = 0;
+  // 计算网格行列数（确保数字均匀分布）
+  const cols = Math.ceil(Math.sqrt(NUMBER_COUNT * (availableWidth / availableHeight)));
+  const rows = Math.ceil(NUMBER_COUNT / cols);
+  const cellWidth = availableWidth / cols;
+  const cellHeight = availableHeight / rows;
+  
+  // 在网格单元内随机放置数字
+  for (let i = 0; i < numbers.length; i++) {
+    const row = Math.floor(i / cols);
+    const col = i % cols;
     
-    // 尝试找到合适的位置
-    while (!position && attempts < 200) {
-      attempts++;
-      
-      // 在可见区域生成随机位置（避开头状态栏）
-      const x = 10 + Math.random() * (availableWidth - 20);
-      const y = TOP_BAR_HEIGHT + 10 + Math.random() * (availableHeight - 20);
-      
-      let collision = false;
-      
-      // 检查与所有已有数字的距离
-      for (const other of positions) {
-        const dx = other.x - x;
-        const dy = other.y - y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance < MIN_SPACING) {
-          collision = true;
-          break;
-        }
-      }
-      
-      if (!collision) {
-        position = {x, y, number: num, found: false};
-      }
-    }
+    // 在网格单元内随机偏移（确保间距）
+    const x = col * cellWidth + cellWidth * 0.5 + (Math.random() - 0.5) * (cellWidth - MIN_SPACING);
+    const y = TOP_BAR_HEIGHT + row * cellHeight + cellHeight * 0.5 + (Math.random() - 0.5) * (cellHeight - MIN_SPACING);
     
-    // 如果尝试失败，强制添加到不会重叠的位置
-    if (!position) {
-      // 简单均匀分布
-      const cols = Math.ceil(Math.sqrt(NUMBER_COUNT));
-      const col = positions.length % cols;
-      const row = Math.floor(positions.length / cols);
-      
-      position = {
-        x: col * (availableWidth / cols) + (availableWidth / cols) * 0.5,
-        y: TOP_BAR_HEIGHT + row * (availableHeight / cols) + (availableHeight / cols) * 0.5,
-        number: num,
-        found: false
-      };
-    }
-    
-    positions.push(position);
+    positions.push({
+      x: Math.max(20, Math.min(SCREEN_WIDTH - 20, x)),
+      y: Math.max(TOP_BAR_HEIGHT + 20, Math.min(SCREEN_HEIGHT - 20, y)),
+      number: numbers[i],
+      found: false
+    });
   }
 
   drawGame();
 }
 
-// 绘制圆圈的修正方法
-function drawCircle(x, y, color) {
-  const radius = 12; // 更小的半径
+// 绘制手绘效果的圆圈
+function drawHandDrawnCircle(x, y, color) {
+  const radius = 12; // 圆圈半径
   
   ctx.beginPath();
-  ctx.arc(x, y, radius, 0, Math.PI * 2);
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2.5;
   
-  // 添加手绘效果 - 轻微的随机偏移
+  // 创建手绘效果的点
   const points = [];
   for (let i = 0; i < 8; i++) {
     const angle = i * (Math.PI * 2) / 8;
-    const px = x + Math.cos(angle) * radius;
-    const py = y + Math.sin(angle) * radius;
-    points.push({x: px, y: py});
+    // 添加轻微不规则性
+    const offset = Math.random() * 2 - 1;
+    points.push({
+      x: x + Math.cos(angle) * (radius + offset),
+      y: y + Math.sin(angle) * (radius + offset)
+    });
   }
   
+  // 使用二次贝塞尔曲线连接点
   for (let i = 0; i < points.length; i++) {
     const next = points[(i + 1) % points.length];
-    ctx.quadraticCurveTo(
-      points[i].x, 
-      points[i].y,
-      (points[i].x + next.x) / 2,
-      (points[i].y + next.y) / 2
-    );
+    if (i === 0) {
+      ctx.moveTo(points[i].x, points[i].y);
+    }
+    const cpx = (points[i].x + next.x) / 2;
+    const cpy = (points[i].y + next.y) / 2;
+    ctx.quadraticCurveTo(cpx, cpy, next.x, next.y);
   }
   
+  ctx.closePath();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.5;
   ctx.stroke();
 }
 
 // 获取随机的圆圈颜色
 function getRandomCircleColor() {
   const colors = [
-    '#32CD32', // 绿色（如18,12）
-    '#1E90FF', // 蓝色（如4,22）
+    '#1E90FF', // 蓝色
+    '#32CD32', // 绿色
     '#9370DB', // 紫色
+    '#FF6347', // 红色
     '#FFD700', // 金色
     '#00CED1'  // 青色
   ];
   return colors[Math.floor(Math.random() * colors.length)];
 }
 
-// 绘制游戏界面（修正）
+// 绘制游戏界面
 function drawGame() {
   // 清空画布
   ctx.clearRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -156,7 +135,7 @@ function drawGame() {
   ctx.lineTo(SCREEN_WIDTH, TOP_BAR_HEIGHT);
   ctx.stroke();
   
-  // 绘制时间（左上角）
+  // 绘制时间
   const elapsed = gameStarted ? Math.floor((Date.now() - startTime) / 1000) : 0;
   const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
   const seconds = (elapsed % 60).toString().padStart(2, '0');
@@ -168,7 +147,7 @@ function drawGame() {
   ctx.textBaseline = 'middle';
   ctx.fillText(timeStr, 15, TOP_BAR_HEIGHT / 2);
   
-  // 绘制下一个要选择的数字（中间）
+  // 绘制下一个要选择的数字
   ctx.font = 'bold 28px sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText(`${currentNumber}`, SCREEN_WIDTH / 2, TOP_BAR_HEIGHT / 2);
@@ -180,14 +159,13 @@ function drawGame() {
   
   positions.forEach(pos => {
     if (pos.found && pos.circleColor) {
-      // 先绘制圆圈
-      drawCircle(pos.x, pos.y, pos.circleColor);
-      
-      // 再绘制数字（白色，在圆圈上）
-      ctx.fillStyle = '#FFF';
+      // 先绘制手绘圆圈
+      drawHandDrawnCircle(pos.x, pos.y, pos.circleColor);
+      // 数字颜色保持不变（黑色）
+      ctx.fillStyle = '#333';
       ctx.fillText(pos.number.toString(), pos.x, pos.y);
     } else {
-      // 未找到的数字（直接绘制）
+      // 未找到的数字
       ctx.fillStyle = '#333';
       ctx.fillText(pos.number.toString(), pos.x, pos.y);
     }
@@ -254,6 +232,6 @@ wx.onTouchStart((e) => {
   });
 });
 
-// 正确初始化游戏
+// 初始化游戏
 loadBackgroundImage();
 initGame();
