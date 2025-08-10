@@ -29,42 +29,44 @@ const loadBackgroundImage = () => {
 // 初始化游戏
 function initGame() {
   // 生成1-100的有序数组
-  const unShufflednumbers = Array.from({length: NUMBER_COUNT}, (_, i) => i + 1);  
-  const numbers = (unShufflednumbers);  
-  
+  const unShufflednumbers = Array.from({
+    length: NUMBER_COUNT
+  }, (_, i) => i + 1);
+  const numbers = shuffleArray(unShufflednumbers);
+
   // 计算随机位置（使用优化的均匀分布算法）
   positions = [];
-  
+
   // 计算可用区域（考虑顶部和底部留白）
   const availableWidth = SCREEN_WIDTH;
   const availableHeight = SCREEN_HEIGHT - TOP_BAR_HEIGHT - BOTTOM_BAR_HEIGHT;
-  
+
   // 随机生成每行数字数量（6-10之间）
   const cols = Math.floor(Math.random() * 5) + 6; // 6-10
   const rows = Math.ceil(NUMBER_COUNT / cols);
   const cellWidth = availableWidth / cols;
   const cellHeight = availableHeight / rows;
-  
+
   // 生成随机偏移因子（使每次游戏布局不同）
   const randomOffsetFactor = Math.random() * 0.3 + 0.7; // 0.7-1.0之间的随机因子
-  
+
   // 在网格单元内随机放置数字
   for (let i = 0; i < numbers.length; i++) {
     const row = Math.floor(i / cols);
     const col = i % cols;
-    
+
     // 网格单元基础位置
     const baseX = col * cellWidth;
     const baseY = row * cellHeight;
-    
+
     // 添加更大幅度的随机偏移（同时确保间距）
     const offsetX = Math.random() * (cellWidth - MIN_SPACING) * randomOffsetFactor;
     const offsetY = Math.random() * (cellHeight - MIN_SPACING) * randomOffsetFactor;
-    
+
     // 最终位置（使用更动态的计算方式）
     const x = Math.max(15, Math.min(availableWidth - 15, baseX + cellWidth * 0.2 + offsetX));
     const y = TOP_BAR_HEIGHT + Math.max(15, Math.min(availableHeight - 15, baseY + cellHeight * 0.2 + offsetY));
-    
+
     // 添加轻微扰动使分布更自然
     positions.push({
       x: x + (Math.random() - 0.5) * 10, // ±5像素扰动
@@ -80,7 +82,7 @@ function initGame() {
       const dx = positions[i].x - positions[j].x;
       const dy = positions[i].y - positions[j].y;
       const distance = Math.sqrt(dx * dx + dy * dy);
-      
+
       if (distance < MIN_SPACING) {
         // 移动位置使间距足够
         const moveDist = (MIN_SPACING - distance) / 2;
@@ -98,9 +100,9 @@ function initGame() {
 // 绘制手绘效果的圆圈
 function drawHandDrawnCircle(x, y, color) {
   const radius = 15; // 圆圈半径
-  
+
   ctx.beginPath();
-  
+
   // 创建手绘效果的点
   const points = [];
   for (let i = 0; i < 8; i++) {
@@ -112,7 +114,7 @@ function drawHandDrawnCircle(x, y, color) {
       y: y + Math.sin(angle) * (radius + offset)
     });
   }
-  
+
   // 使用二次贝塞尔曲线连接点
   ctx.moveTo(points[0].x, points[0].y);
   for (let i = 1; i < points.length; i++) {
@@ -120,11 +122,11 @@ function drawHandDrawnCircle(x, y, color) {
     const current = points[i];
     const cpx = (prev.x + current.x) / 2;
     const cpy = (prev.y + current.y) / 2;
-    
+
     ctx.quadraticCurveTo(prev.x, prev.y, cpx, cpy);
   }
   ctx.quadraticCurveTo(points[points.length - 1].x, points[points.length - 1].y, points[0].x, points[0].y);
-  
+
   ctx.closePath();
   ctx.strokeStyle = color;
   ctx.lineWidth = 2.5;
@@ -139,7 +141,7 @@ function getRandomCircleColor() {
     '#9370DB', // 紫色
     '#FF6347', // 红色
     '#FFD700', // 金色
-    '#00CED1'  // 青色
+    '#00CED1' // 青色
   ];
   return colors[Math.floor(Math.random() * colors.length)];
 }
@@ -148,7 +150,7 @@ function getRandomCircleColor() {
 function drawGame() {
   // 清空画布
   ctx.clearRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-  
+
   // 绘制背景图片（如果有）
   if (backgroundImage) {
     ctx.drawImage(backgroundImage, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -156,18 +158,18 @@ function drawGame() {
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
   }
-  
+
   // 绘制顶部状态栏
   ctx.fillStyle = 'rgba(249, 249, 249, 1)';
   ctx.fillRect(0, 0, SCREEN_WIDTH, TOP_BAR_HEIGHT);
-  
+
   // 绘制顶部分割线
   ctx.strokeStyle = '#e0e0e0';
   ctx.beginPath();
   ctx.moveTo(0, TOP_BAR_HEIGHT);
   ctx.lineTo(SCREEN_WIDTH, TOP_BAR_HEIGHT);
   ctx.stroke();
-  
+
   // 绘制底部状态栏
   ctx.fillStyle = 'rgba(249, 249, 249, 1)';
   ctx.fillRect(0, SCREEN_HEIGHT - BOTTOM_BAR_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -184,23 +186,23 @@ function drawGame() {
   const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
   const seconds = (elapsed % 60).toString().padStart(2, '0');
   const timeStr = `${minutes}:${seconds}`;
-  
+
   ctx.font = '26px sans-serif';
   ctx.fillStyle = '#333';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   ctx.fillText(timeStr, 15, TOP_BAR_HEIGHT / 2);
-  
+
   // 绘制下一个要选择的数字
   ctx.font = 'bold 28px sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText(`${currentNumber}`, SCREEN_WIDTH / 2, TOP_BAR_HEIGHT / 2);
-  
+
   // 绘制数字
   ctx.font = '15px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  
+
   positions.forEach(pos => {
     if (pos.found && pos.circleColor) {
       // 先绘制手绘圆圈
@@ -223,7 +225,7 @@ function endGame() {
   const elapsed = Math.floor((Date.now() - startTime) / 1000);
   const minutes = Math.floor(elapsed / 60);
   const seconds = elapsed % 60;
-  
+
   wx.showModal({
     title: '游戏完成',
     content: `恭喜你完成了游戏！用时: ${minutes}分${seconds}秒`,
@@ -232,20 +234,20 @@ function endGame() {
 }
 
 // 随机打乱数组  
-function shuffleArray(array) {  
-  for (let i = array.length - 1; i > 0; i--) {  
-    const j = Math.floor(Math.random() * (i + 1));  
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
     [array[i], array[j]] = [array[j], array[i]]; // 交换元素  
-  }  
-  return array;  
-}  
+  }
+  return array;
+}
 
 // 触摸事件处理
 wx.onTouchStart((e) => {
   const touch = e.touches[0];
   const x = touch.clientX;
   const y = touch.clientY;
-  
+
   // 点击游戏区域开始游戏
   if (!gameStarted && y > TOP_BAR_HEIGHT && y < SCREEN_HEIGHT - BOTTOM_BAR_HEIGHT) {
     gameStarted = true;
@@ -254,17 +256,17 @@ wx.onTouchStart((e) => {
       drawGame();
     }, 1000);
   }
-  
+
   // 检查是否点击了数字
   const touchRadius = 16; // 触摸检测半径
-  
+
   positions.forEach(pos => {
     if (!pos.found) {
       // 计算触摸点与数字中心的距离
       const dx = x - pos.x;
       const dy = y - pos.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
-      
+
       // 如果点击点在数字范围内
       if (distance < touchRadius) {
         if (pos.number === currentNumber) {
@@ -272,12 +274,12 @@ wx.onTouchStart((e) => {
           // 为每个数字分配一个随机的圆圈颜色
           pos.circleColor = getRandomCircleColor();
           currentNumber++;
-          
+
           // 游戏完成检查
           if (currentNumber > NUMBER_COUNT) {
             endGame();
           }
-          
+
           drawGame();
         }
       }
