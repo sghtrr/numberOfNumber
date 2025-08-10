@@ -4,6 +4,7 @@ const SCREEN_WIDTH = systemInfo.windowWidth;
 const SCREEN_HEIGHT = systemInfo.windowHeight;
 const TOP_BAR_HEIGHT = 60;
 const NUMBER_COUNT = 100;
+const MIN_SPACING = 20; // 减小最小间距
 
 let canvas = wx.createCanvas();
 let ctx = canvas.getContext('2d');
@@ -12,114 +13,140 @@ let currentNumber = 1;
 let gameStarted = false;
 let positions = [];
 let touchTimer = null;
+let backgroundImage = null;
+
+// 加载背景图片的正确方法
+const loadBackgroundImage = () => {
+  const img = wx.createImage();
+  img.onload = () => {
+    backgroundImage = img;
+    drawGame();
+  };
+  img.src = './images/bg.jpeg';
+};
 
 // 初始化游戏
 function initGame() {
   // 生成1-100的有序数组
   const numbers = Array.from({length: NUMBER_COUNT}, (_, i) => i + 1);
   
-  // 计算随机位置（避开边缘和顶部状态栏）
+  // 计算随机位置（使用优化的碰撞检测算法）
   positions = [];
-  const minSpacing = Math.max(SCREEN_WIDTH, SCREEN_HEIGHT) / 20; // 最小间距
   
-  for (let i = 0; i < numbers.length; i++) {
-    let validPosition = false;
+  // 计算可用区域
+  const availableWidth = SCREEN_WIDTH;
+  const availableHeight = SCREEN_HEIGHT - TOP_BAR_HEIGHT;
+  
+  for (let num of numbers) {
+    let position = null;
     let attempts = 0;
     
-    while (!validPosition && attempts < 100) {
+    // 尝试找到合适的位置
+    while (!position && attempts < 200) {
       attempts++;
-      const newPos = {
-        x: Math.random() * (SCREEN_WIDTH - 40) + 20,
-        y: TOP_BAR_HEIGHT + 20 + Math.random() * (SCREEN_HEIGHT - TOP_BAR_HEIGHT - 60),
-        number: numbers[i],
-        found: false
-      };
       
-      // 检查是否与其他数字重叠
-      validPosition = true;
-      for (const pos of positions) {
-        const dx = newPos.x - pos.x;
-        const dy = newPos.y - pos.y;
-        if (dx * dx + dy * dy < minSpacing * minSpacing) {
-          validPosition = false;
+      // 在可见区域生成随机位置（避开头状态栏）
+      const x = 10 + Math.random() * (availableWidth - 20);
+      const y = TOP_BAR_HEIGHT + 10 + Math.random() * (availableHeight - 20);
+      
+      let collision = false;
+      
+      // 检查与所有已有数字的距离
+      for (const other of positions) {
+        const dx = other.x - x;
+        const dy = other.y - y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance < MIN_SPACING) {
+          collision = true;
           break;
         }
       }
       
-      if (validPosition) positions.push(newPos);
+      if (!collision) {
+        position = {x, y, number: num, found: false};
+      }
     }
     
-    // 如果尝试太多次找不到位置，随机放入
-    if (!validPosition) {
-      positions.push({
-        x: Math.random() * (SCREEN_WIDTH - 40) + 20,
-        y: TOP_BAR_HEIGHT + 20 + Math.random() * (SCREEN_HEIGHT - TOP_BAR_HEIGHT - 60),
-        number: numbers[i],
+    // 如果尝试失败，强制添加到不会重叠的位置
+    if (!position) {
+      // 简单均匀分布
+      const cols = Math.ceil(Math.sqrt(NUMBER_COUNT));
+      const col = positions.length % cols;
+      const row = Math.floor(positions.length / cols);
+      
+      position = {
+        x: col * (availableWidth / cols) + (availableWidth / cols) * 0.5,
+        y: TOP_BAR_HEIGHT + row * (availableHeight / cols) + (availableHeight / cols) * 0.5,
+        number: num,
         found: false
-      });
+      };
     }
+    
+    positions.push(position);
   }
 
   drawGame();
 }
 
-// 绘制手绘效果的圆圈
-function drawHandDrawnCircle(x, y, radius, color) {
-  const POINTS = 24; // 更多点使圆更平滑
-  const JITTER = radius * 0.1; // 抖动幅度
-  const lineWidth = 3;
+// 绘制圆圈的修正方法
+function drawCircle(x, y, color) {
+  const radius = 12; // 更小的半径
   
   ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.5;
   
-  // 创建初始点
-  const startAngle = Math.random() * Math.PI * 2;
-  for (let i = 0; i < POINTS; i++) {
-    const angle = startAngle + i * Math.PI * 2 / POINTS;
-    
-    // 添加随机抖动
-    const jitteredRadius = radius + (Math.random() - 0.5) * JITTER;
-    const pointX = x + Math.cos(angle) * jitteredRadius;
-    const pointY = y + Math.sin(angle) * jitteredRadius;
-    
-    if (i === 0) {
-      ctx.moveTo(pointX, pointY);
-    } else {
-      // 使用二次贝塞尔曲线连接点
-      const prevX = x + Math.cos(angle - Math.PI * 2 / POINTS) * radius;
-      const prevY = y + Math.sin(angle - Math.PI * 2 / POINTS) * radius;
-      const controlX = (prevX + pointX) / 2;
-      const controlY = (prevY + pointY) / 2;
-      ctx.quadraticCurveTo(controlX, controlY, pointX, pointY);
-    }
+  // 添加手绘效果 - 轻微的随机偏移
+  const points = [];
+  for (let i = 0; i < 8; i++) {
+    const angle = i * (Math.PI * 2) / 8;
+    const px = x + Math.cos(angle) * radius;
+    const py = y + Math.sin(angle) * radius;
+    points.push({x: px, y: py});
   }
   
-  // 闭合路径
-  ctx.closePath();
+  for (let i = 0; i < points.length; i++) {
+    const next = points[(i + 1) % points.length];
+    ctx.quadraticCurveTo(
+      points[i].x, 
+      points[i].y,
+      (points[i].x + next.x) / 2,
+      (points[i].y + next.y) / 2
+    );
+  }
   
-  ctx.strokeStyle = color;
-  ctx.lineWidth = lineWidth;
   ctx.stroke();
 }
 
-// 获取随机的圆圈颜色（蓝、绿、紫等明快颜色）
+// 获取随机的圆圈颜色
 function getRandomCircleColor() {
   const colors = [
-    '#1E90FF', // 蓝色
-    '#32CD32', // 绿色
+    '#32CD32', // 绿色（如18,12）
+    '#1E90FF', // 蓝色（如4,22）
     '#9370DB', // 紫色
-    '#FF6347', // 红色
     '#FFD700', // 金色
     '#00CED1'  // 青色
   ];
   return colors[Math.floor(Math.random() * colors.length)];
 }
 
-// 绘制游戏界面
+// 绘制游戏界面（修正）
 function drawGame() {
+  // 清空画布
   ctx.clearRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
   
+  // 绘制背景图片（如果有）
+  if (backgroundImage) {
+    ctx.drawImage(backgroundImage, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  } else {
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  }
+  
   // 绘制顶部状态栏
-  ctx.fillStyle = '#f9f9f9';
+  ctx.fillStyle = 'rgba(249, 249, 249, 0.8)';
   ctx.fillRect(0, 0, SCREEN_WIDTH, TOP_BAR_HEIGHT);
   
   // 绘制分割线
@@ -129,53 +156,42 @@ function drawGame() {
   ctx.lineTo(SCREEN_WIDTH, TOP_BAR_HEIGHT);
   ctx.stroke();
   
-  // 绘制时间
+  // 绘制时间（左上角）
   const elapsed = gameStarted ? Math.floor((Date.now() - startTime) / 1000) : 0;
-  const timeStr = `${Math.floor(elapsed / 60).toString().padStart(2, '0')}:${(elapsed % 60).toString().padStart(2, '0')}`;
+  const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+  const seconds = (elapsed % 60).toString().padStart(2, '0');
+  const timeStr = `${minutes}:${seconds}`;
   
-  ctx.font = '28px sans-serif';
+  ctx.font = '26px sans-serif';
   ctx.fillStyle = '#333';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  ctx.fillText(timeStr, 20, TOP_BAR_HEIGHT / 2);
+  ctx.fillText(timeStr, 15, TOP_BAR_HEIGHT / 2);
   
-  // 绘制下一个要选择的数字（较大字体）
-  ctx.font = 'bold 34px sans-serif';
+  // 绘制下一个要选择的数字（中间）
+  ctx.font = 'bold 28px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText(`下一个: ${currentNumber}`, SCREEN_WIDTH / 2, TOP_BAR_HEIGHT / 2);
+  ctx.fillText(`${currentNumber}`, SCREEN_WIDTH / 2, TOP_BAR_HEIGHT / 2);
   
-  // 绘制图标区域背景
-  ctx.fillStyle = '#f0f0f0';
-  ctx.beginPath();
-  ctx.arc(SCREEN_WIDTH - 50, TOP_BAR_HEIGHT / 2, 20, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(SCREEN_WIDTH - 100, TOP_BAR_HEIGHT / 2, 20, 0, Math.PI * 2);
-  ctx.fill();
-  
-  // 绘制数字 - 较小的字体
-  ctx.font = '18px sans-serif';
+  // 绘制数字
+  ctx.font = '20px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   
   positions.forEach(pos => {
-    if (!pos.found) {
-      ctx.fillStyle = '#333';
-      ctx.fillText(pos.number.toString(), pos.x, pos.y);
-    } else if (pos.circleColor) {
-      // 已找到的数字要保留圆圈和数字
-      drawHandDrawnCircle(pos.x, pos.y, 22, pos.circleColor);
+    if (pos.found && pos.circleColor) {
+      // 先绘制圆圈
+      drawCircle(pos.x, pos.y, pos.circleColor);
+      
+      // 再绘制数字（白色，在圆圈上）
       ctx.fillStyle = '#FFF';
+      ctx.fillText(pos.number.toString(), pos.x, pos.y);
+    } else {
+      // 未找到的数字（直接绘制）
+      ctx.fillStyle = '#333';
       ctx.fillText(pos.number.toString(), pos.x, pos.y);
     }
   });
-  
-  // 绘制进度百分比
-  const percent = ((currentNumber - 1) / NUMBER_COUNT * 100).toFixed(1);
-  ctx.font = '14px sans-serif';
-  ctx.fillStyle = '#666';
-  ctx.textAlign = 'right';
-  ctx.fillText(`${percent}%`, SCREEN_WIDTH - 20, TOP_BAR_HEIGHT / 2);
 }
 
 // 游戏结束
@@ -209,6 +225,8 @@ wx.onTouchStart((e) => {
   }
   
   // 检查是否点击了数字
+  const touchRadius = 15; // 触摸检测半径
+  
   positions.forEach(pos => {
     if (!pos.found) {
       // 计算触摸点与数字中心的距离
@@ -217,7 +235,7 @@ wx.onTouchStart((e) => {
       const distance = Math.sqrt(dx * dx + dy * dy);
       
       // 如果点击点在数字范围内
-      if (distance < 25) {
+      if (distance < touchRadius) {
         if (pos.number === currentNumber) {
           pos.found = true;
           // 为每个数字分配一个随机的圆圈颜色
@@ -236,5 +254,6 @@ wx.onTouchStart((e) => {
   });
 });
 
-// 初始化游戏
+// 正确初始化游戏
+loadBackgroundImage();
 initGame();
