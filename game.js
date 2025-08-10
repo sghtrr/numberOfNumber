@@ -28,8 +28,9 @@ const loadBackgroundImage = () => {
 // 初始化游戏
 function initGame() {
   // 生成1-100的有序数组
-  const numbers = Array.from({length: NUMBER_COUNT}, (_, i) => i + 1);
-  
+  const unShufflednumbers = Array.from({length: NUMBER_COUNT}, (_, i) => i + 1);
+  const numbers = shuffleArray(unShufflednumbers);
+
   // 计算随机位置（使用优化的均匀分布算法）
   positions = [];
   
@@ -65,7 +66,7 @@ function initGame() {
 
 // 绘制手绘效果的圆圈
 function drawHandDrawnCircle(x, y, color) {
-  const radius = 12; // 圆圈半径
+  const radius = 15; // 圆圈半径
   
   ctx.beginPath();
   
@@ -153,7 +154,7 @@ function drawGame() {
   ctx.fillText(`${currentNumber}`, SCREEN_WIDTH / 2, TOP_BAR_HEIGHT / 2);
   
   // 绘制数字
-  ctx.font = '20px sans-serif';
+  ctx.font = '15px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   
@@ -187,6 +188,15 @@ function endGame() {
   });
 }
 
+// 随机打乱数组
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]]; // 交换元素
+  }
+  return array;
+}
+
 // 触摸事件处理
 wx.onTouchStart((e) => {
   const touch = e.touches[0];
@@ -203,7 +213,7 @@ wx.onTouchStart((e) => {
   }
   
   // 检查是否点击了数字
-  const touchRadius = 15; // 触摸检测半径
+  const touchRadius = 16; // 触摸检测半径
   
   positions.forEach(pos => {
     if (!pos.found) {
