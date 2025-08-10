@@ -2,9 +2,10 @@
 const systemInfo = wx.getSystemInfoSync();
 const SCREEN_WIDTH = systemInfo.windowWidth;
 const SCREEN_HEIGHT = systemInfo.windowHeight;
-const TOP_BAR_HEIGHT = 60;
+const TOP_BAR_HEIGHT = 100;
+const BOTTOM_BAR_HEIGHT = 50; // 新增底部留白区域
 const NUMBER_COUNT = 100;
-const MIN_SPACING = 30; // 数字间最小间距
+const MIN_SPACING = 20; // 数字间最小间距
 
 let canvas = wx.createCanvas();
 let ctx = canvas.getContext('2d');
@@ -28,18 +29,18 @@ const loadBackgroundImage = () => {
 // 初始化游戏
 function initGame() {
   // 生成1-100的有序数组
-  const unShufflednumbers = Array.from({length: NUMBER_COUNT}, (_, i) => i + 1); 
-  const numbers = (unShufflednumbers); 
+  const unShufflednumbers = Array.from({length: NUMBER_COUNT}, (_, i) => i + 1);  
+  const numbers = (unShufflednumbers);  
   
   // 计算随机位置（使用优化的均匀分布算法）
   positions = [];
   
-  // 计算可用区域
+  // 计算可用区域（考虑顶部和底部留白）
   const availableWidth = SCREEN_WIDTH;
-  const availableHeight = SCREEN_HEIGHT - TOP_BAR_HEIGHT;
+  const availableHeight = SCREEN_HEIGHT - TOP_BAR_HEIGHT - BOTTOM_BAR_HEIGHT;
   
-  // 计算网格行列数（确保数字均匀分布）
-  const cols = Math.ceil(Math.sqrt(NUMBER_COUNT * (availableWidth / availableHeight)));
+  // 随机生成每行数字数量（6-10之间）
+  const cols = Math.floor(Math.random() * 5) + 6; // 6-10
   const rows = Math.ceil(NUMBER_COUNT / cols);
   const cellWidth = availableWidth / cols;
   const cellHeight = availableHeight / rows;
@@ -157,16 +158,27 @@ function drawGame() {
   }
   
   // 绘制顶部状态栏
-  ctx.fillStyle = 'rgba(249, 249, 249, 0.8)';
+  ctx.fillStyle = 'rgba(249, 249, 249, 1)';
   ctx.fillRect(0, 0, SCREEN_WIDTH, TOP_BAR_HEIGHT);
   
-  // 绘制分割线
+  // 绘制顶部分割线
   ctx.strokeStyle = '#e0e0e0';
   ctx.beginPath();
   ctx.moveTo(0, TOP_BAR_HEIGHT);
   ctx.lineTo(SCREEN_WIDTH, TOP_BAR_HEIGHT);
   ctx.stroke();
   
+  // 绘制底部状态栏
+  ctx.fillStyle = 'rgba(249, 249, 249, 1)';
+  ctx.fillRect(0, SCREEN_HEIGHT - BOTTOM_BAR_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+  // 绘制底部分割线
+  ctx.strokeStyle = '#e0e0e0';
+  ctx.beginPath();
+  ctx.moveTo(0, SCREEN_HEIGHT - BOTTOM_BAR_HEIGHT);
+  ctx.lineTo(SCREEN_WIDTH, SCREEN_HEIGHT - BOTTOM_BAR_HEIGHT);
+  ctx.stroke();
+
   // 绘制时间
   const elapsed = gameStarted ? Math.floor((Date.now() - startTime) / 1000) : 0;
   const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
@@ -219,14 +231,14 @@ function endGame() {
   });
 }
 
-// 随机打乱数组 
-function shuffleArray(array) { 
-  for (let i = array.length - 1; i > 0; i--) { 
-    const j = Math.floor(Math.random() * (i + 1)); 
-    [array[i], array[j]] = [array[j], array[i]]; // 交换元素 
-  } 
-  return array; 
-} 
+// 随机打乱数组  
+function shuffleArray(array) {  
+  for (let i = array.length - 1; i > 0; i--) {  
+    const j = Math.floor(Math.random() * (i + 1));  
+    [array[i], array[j]] = [array[j], array[i]]; // 交换元素  
+  }  
+  return array;  
+}  
 
 // 触摸事件处理
 wx.onTouchStart((e) => {
@@ -235,7 +247,7 @@ wx.onTouchStart((e) => {
   const y = touch.clientY;
   
   // 点击游戏区域开始游戏
-  if (!gameStarted && y > TOP_BAR_HEIGHT) {
+  if (!gameStarted && y > TOP_BAR_HEIGHT && y < SCREEN_HEIGHT - BOTTOM_BAR_HEIGHT) {
     gameStarted = true;
     startTime = Date.now();
     touchTimer = setInterval(() => {
