@@ -1,9 +1,9 @@
 // game.js
-const systemInfo = wx.getSystemInfoSync();
-const SCREEN_WIDTH = systemInfo.windowWidth;
-const SCREEN_HEIGHT = systemInfo.windowHeight;
-const TOP_BAR_HEIGHT = 100;
-const BOTTOM_BAR_HEIGHT = 50; // 新增底部留白区域
+const windowInfo = wx.getWindowInfo();
+const SCREEN_WIDTH = windowInfo.windowWidth;
+const SCREEN_HEIGHT = windowInfo.windowHeight;
+const TOP_BAR_HEIGHT = 105;
+const BOTTOM_BAR_HEIGHT = 105; // 新增底部留白区域
 const NUMBER_COUNT = 100;
 const MIN_SPACING = 20; // 数字间最小间距
 
@@ -20,14 +20,13 @@ let customFont = null;
 // 加载自定义字体
 const loadCustomFont = () => {
   try {
-    // 微信小游戏中 loadFont 直接传入字体路径字符串
-    wx.loadFont('./font/caveat/caveatbrush-regular.ttf');
-    customFont = 'Caveat Brush';
-    console.log('字体加载成功');
-    drawGame(); // 重新绘制游戏界面
+    const family = wx.loadFont('font/caveat/caveatbrush-regular.ttf'); // 返回可用的字体族名
+    customFont = family || 'sans-serif';
+    console.log('字体加载成功:', customFont);
+    drawGame();
   } catch (err) {
     console.error('字体加载失败:', err);
-    customFont = 'sans-serif'; // 加载失败时使用默认字体
+    customFont = 'sans-serif';
     drawGame();
   }
 };
@@ -35,11 +34,12 @@ const loadCustomFont = () => {
 // 加载背景图片
 const loadBackgroundImage = () => {
   const img = wx.createImage();
+  console.log('背景加载成功');
   img.onload = () => {
     backgroundImage = img;
     drawGame();
   };
-  img.src = './images/bg.jpeg';
+  img.src = 'images/bg.jpeg';
 };
 
 // 初始化游戏
@@ -177,24 +177,24 @@ function drawGame() {
 
   // 绘制顶部状态栏
   ctx.fillStyle = 'rgba(249, 249, 249, 1)';
-  ctx.fillRect(0, 0, SCREEN_WIDTH, TOP_BAR_HEIGHT);
+  ctx.fillRect(0, 0, SCREEN_WIDTH, TOP_BAR_HEIGHT - 5);
 
   // 绘制顶部分割线
   ctx.strokeStyle = '#e0e0e0';
   ctx.beginPath();
-  ctx.moveTo(0, TOP_BAR_HEIGHT);
-  ctx.lineTo(SCREEN_WIDTH, TOP_BAR_HEIGHT);
+  ctx.moveTo(0, TOP_BAR_HEIGHT - 5);
+  ctx.lineTo(SCREEN_WIDTH, TOP_BAR_HEIGHT - 5);
   ctx.stroke();
 
   // 绘制底部状态栏
   ctx.fillStyle = 'rgba(249, 249, 249, 1)';
-  ctx.fillRect(0, SCREEN_HEIGHT - BOTTOM_BAR_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT);
+  ctx.fillRect(0, SCREEN_HEIGHT - BOTTOM_BAR_HEIGHT + 5, SCREEN_WIDTH, SCREEN_HEIGHT);
 
   // 绘制底部分割线
   ctx.strokeStyle = '#e0e0e0';
   ctx.beginPath();
-  ctx.moveTo(0, SCREEN_HEIGHT - BOTTOM_BAR_HEIGHT);
-  ctx.lineTo(SCREEN_WIDTH, SCREEN_HEIGHT - BOTTOM_BAR_HEIGHT);
+  ctx.moveTo(0, SCREEN_HEIGHT - BOTTOM_BAR_HEIGHT + 5);
+  ctx.lineTo(SCREEN_WIDTH, SCREEN_HEIGHT - BOTTOM_BAR_HEIGHT + 5);
   ctx.stroke();
 
   // 绘制时间
@@ -203,19 +203,19 @@ function drawGame() {
   const seconds = (elapsed % 60).toString().padStart(2, '0');
   const timeStr = `${minutes}:${seconds}`;
 
-  ctx.font = `26px ${customFont || 'sans-serif'}`;
+  ctx.font = `26px "${customFont}"`;
   ctx.fillStyle = '#333';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  ctx.fillText(timeStr, 15, TOP_BAR_HEIGHT / 2);
+  ctx.fillText(timeStr, 15, TOP_BAR_HEIGHT / 1.5);
 
   // 绘制下一个要选择的数字
-  ctx.font = `bold 28px ${customFont || 'sans-serif'}`;
+  ctx.font = `bold 28px "${customFont}"`;
   ctx.textAlign = 'center';
-  ctx.fillText(`${currentNumber}`, SCREEN_WIDTH / 2, TOP_BAR_HEIGHT / 2);
+  ctx.fillText(`${currentNumber}`, SCREEN_WIDTH / 2, TOP_BAR_HEIGHT / 1.5);
 
   // 绘制数字
-  ctx.font = `20px ${customFont || 'sans-serif'}`;
+  ctx.font = `20px "${customFont}"`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
