@@ -115,34 +115,33 @@ function initGame() {
 }
 
 // 绘制手绘效果的圆圈
-function drawHandDrawnCircle(x, y, color) {
-  const radius = 15; // 圆圈半径
-
-  ctx.beginPath();
-
-  // 创建手绘效果的点
+function generateHandDrawnCirclePoints(x, y, radius) {
   const points = [];
   for (let i = 0; i < 8; i++) {
     const angle = i * (Math.PI * 2) / 8;
-    // 添加轻微不规则性
     const offset = Math.random() * 3 - 1.5; // ±1.5像素扰动
     points.push({
       x: x + Math.cos(angle) * (radius + offset),
       y: y + Math.sin(angle) * (radius + offset)
     });
   }
+  return points;
+}
 
-  // 使用二次贝塞尔曲线连接点
-  ctx.moveTo(points[0].x, points[0].y);
-  for (let i = 1; i < points.length; i++) {
-    const prev = points[i - 1];
-    const current = points[i];
+function drawHandDrawnCircle(x, y, color, points) {
+  const radius = 15; // 圆圈半径
+  const pts = (points && points.length) ? points : generateHandDrawnCirclePoints(x, y, radius);
+
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) {
+    const prev = pts[i - 1];
+    const current = pts[i];
     const cpx = (prev.x + current.x) / 2;
     const cpy = (prev.y + current.y) / 2;
-
     ctx.quadraticCurveTo(prev.x, prev.y, cpx, cpy);
   }
-  ctx.quadraticCurveTo(points[points.length - 1].x, points[points.length - 1].y, points[0].x, points[0].y);
+  ctx.quadraticCurveTo(pts[pts.length - 1].x, pts[pts.length - 1].y, pts[0].x, pts[0].y);
 
   ctx.closePath();
   ctx.strokeStyle = color;
@@ -181,7 +180,7 @@ function drawGame() {
   ctx.fillRect(0, 0, SCREEN_WIDTH, TOP_BAR_HEIGHT - 5);
 
   // 绘制顶部分割线
-  ctx.strokeStyle = '#e0e0e0';
+  ctx.strokeStyle = '#1196db';
   ctx.beginPath();
   ctx.moveTo(0, TOP_BAR_HEIGHT - 5);
   ctx.lineTo(SCREEN_WIDTH, TOP_BAR_HEIGHT - 5);
@@ -192,7 +191,7 @@ function drawGame() {
   ctx.fillRect(0, SCREEN_HEIGHT - BOTTOM_BAR_HEIGHT + 5, SCREEN_WIDTH, SCREEN_HEIGHT);
 
   // 绘制底部分割线
-  ctx.strokeStyle = '#e0e0e0';
+  ctx.strokeStyle = '#1196db';
   ctx.beginPath();
   ctx.moveTo(0, SCREEN_HEIGHT - BOTTOM_BAR_HEIGHT + 5);
   ctx.lineTo(SCREEN_WIDTH, SCREEN_HEIGHT - BOTTOM_BAR_HEIGHT + 5);
@@ -223,7 +222,7 @@ function drawGame() {
   positions.forEach(pos => {
     if (pos.found && pos.circleColor) {
       // 先绘制手绘圆圈
-      drawHandDrawnCircle(pos.x, pos.y, pos.circleColor);
+      drawHandDrawnCircle(pos.x, pos.y, pos.circleColor, pos.circlePoints);
       // 数字颜色保持不变（黑色）
       ctx.fillStyle = '#333';
       ctx.fillText(pos.number.toString(), pos.x, pos.y);
@@ -290,6 +289,8 @@ wx.onTouchStart((e) => {
           pos.found = true;
           // 为每个数字分配一个随机的圆圈颜色
           pos.circleColor = getRandomCircleColor();
+          // 点击时生成并缓存手绘圆圈点，避免后续重绘抖动
+          pos.circlePoints = generateHandDrawnCirclePoints(pos.x, pos.y, 15);
           currentNumber++;
 
           // 游戏完成检查
