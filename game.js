@@ -2,8 +2,8 @@
 const windowInfo = wx.getWindowInfo();
 const SCREEN_WIDTH = windowInfo.windowWidth;
 const SCREEN_HEIGHT = windowInfo.windowHeight;
-const TOP_BAR_HEIGHT = 105;
-const BOTTOM_BAR_HEIGHT = 85; // 新增底部留白区域
+const TOP_BAR_HEIGHT = 105; // 顶部留白区域
+const BOTTOM_BAR_HEIGHT = 85; // 底部留白区域
 const NUMBER_COUNT = 100;
 const MIN_SPACING = 20; // 数字间最小间距
 const DIVIDER_LINE_WIDTH = 3; // 顶部/底部分割线宽度
@@ -15,20 +15,20 @@ let currentNumber = 1;
 let gameStarted = false;
 let positions = [];
 let touchTimer = null;
-let backgroundImage = null;
-let customFont = null;
+let backgroundImage = null; // 背景图片
+let customFont = null; // 自定义字体
 let hintsIcon = null; // 提示图标
+let hintsCount = 100; // 提示次数
+let hintsIconRect = null; // 提示图标点击区域
 
 // 加载自定义字体
 const loadCustomFont = () => {
   try {
     const family = wx.loadFont('font/caveat/caveatbrush-regular.ttf'); // 返回可用的字体族名
-    customFont = family || 'sans-serif';
-    console.log('字体加载成功:', customFont);
+    customFont = family || 'sans-serif'; // 字体族名返回失败的场合使用内置字体
     drawGame();
   } catch (err) {
-    console.error('字体加载失败:', err);
-    customFont = 'sans-serif';
+    customFont = 'sans-serif'; // 加载失败的场合使用内置字体
     drawGame();
   }
 };
@@ -36,7 +36,6 @@ const loadCustomFont = () => {
 // 加载背景图片
 const loadBackgroundImage = () => {
   const img = wx.createImage();
-  console.log('背景加载成功');
   img.onload = () => {
     backgroundImage = img;
     drawGame();
@@ -44,7 +43,7 @@ const loadBackgroundImage = () => {
   img.src = 'images/bg.jpeg';
 };
 
-// 加载提示图标（左下）
+// 加载提示图标
 const loadHintsIcon = () => {
   const img = wx.createImage();
   img.onload = () => {
@@ -60,6 +59,7 @@ function initGame() {
   const unShufflednumbers = Array.from({
     length: NUMBER_COUNT
   }, (_, i) => i + 1);
+  // 打乱数组
   const numbers = shuffleArray(unShufflednumbers);
 
   // 计算随机位置（使用优化的均匀分布算法）
@@ -71,12 +71,12 @@ function initGame() {
 
   // 随机生成每行数字数量（6-10之间）
   // const cols = Math.floor(Math.random() * 5) + 6; // 6-10
-  const cols = 10;
+  const cols = 10; // 每行固定10个数字
   const rows = Math.ceil(NUMBER_COUNT / cols);
   const cellWidth = availableWidth / cols;
   const cellHeight = availableHeight / rows;
 
-  // 生成随机偏移因子（使每次游戏布局不同）
+  // 生成随机偏移因子
   const randomOffsetFactor = Math.random() * 0.1 + 0.9; // 0.9-1.0之间的随机因子
 
   // 在网格单元内随机放置数字
@@ -88,11 +88,11 @@ function initGame() {
     const baseX = col * cellWidth;
     const baseY = row * cellHeight;
 
-    // 添加更大幅度的随机偏移（同时确保间距）
+    // 添加更大幅度的随机偏移
     const offsetX = Math.random() * (cellWidth - MIN_SPACING) * randomOffsetFactor;
     const offsetY = Math.random() * (cellHeight - MIN_SPACING) * randomOffsetFactor;
 
-    // 最终位置（使用更动态的计算方式）
+    // 最终位置
     const x = Math.max(15, Math.min(availableWidth - 15, baseX + cellWidth * 0.2 + offsetX));
     const y = TOP_BAR_HEIGHT + Math.max(15, Math.min(availableHeight - 15, baseY + cellHeight * 0.2 + offsetY));
 
@@ -140,6 +140,7 @@ function generateHandDrawnCirclePoints(x, y, radius) {
   return points;
 }
 
+// 绘制不同颜色手绘效果的圆圈
 function drawHandDrawnCircle(x, y, color, points) {
   const radius = 15; // 圆圈半径
   const pts = (points && points.length) ? points : generateHandDrawnCirclePoints(x, y, radius);
@@ -179,7 +180,7 @@ function drawGame() {
   // 清空画布
   ctx.clearRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-  // 绘制背景图片（如果有）
+  // 绘制背景图片
   if (backgroundImage) {
     ctx.drawImage(backgroundImage, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
   } else {
@@ -211,14 +212,34 @@ function drawGame() {
   ctx.lineTo(SCREEN_WIDTH, SCREEN_HEIGHT - BOTTOM_BAR_HEIGHT + 5);
   ctx.stroke();
 
-  // 绘制提示图标（位于底部留白区域左侧）
+  // 绘制提示图标
   if (hintsIcon) {
-    console.log("icon绘画")
     const iconSize = 40; // 图标尺寸
     const barTop = SCREEN_HEIGHT - BOTTOM_BAR_HEIGHT + 5;
     const iconX = 30; // 左侧内边距
     const iconY = barTop + (BOTTOM_BAR_HEIGHT - iconSize) / 2; // 垂直居中
     ctx.drawImage(hintsIcon, iconX, iconY, iconSize, iconSize);
+
+    // 记录图标点击区域用于命中检测
+    hintsIconRect = { x: iconX, y: iconY, width: iconSize, height: iconSize };
+
+    // 绘制提示次数徽标
+    const badgeR = 12;
+    const badgeCx = iconX + iconSize - badgeR + 3;
+    const badgeCy = iconY + 4;
+    ctx.beginPath();
+    ctx.arc(badgeCx, badgeCy, badgeR, 0, Math.PI * 2);
+    ctx.fillStyle = '#FF4D4F';
+    ctx.fill();
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = `bold 14px "${customFont}"`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(hintsCount), badgeCx, badgeCy);
+  } else {
+    // 图标未就绪时不响应点击
+    hintsIconRect = null;
   }
 
   // 绘制时间
@@ -287,6 +308,27 @@ wx.onTouchStart((e) => {
   const touch = e.touches[0];
   const x = touch.clientX;
   const y = touch.clientY;
+
+  // 点击提示图标：消耗一次提示并圈出当前目标数字
+  if (hintsIconRect && x >= hintsIconRect.x && x <= hintsIconRect.x + hintsIconRect.width && y >= hintsIconRect.y && y <= hintsIconRect.y + hintsIconRect.height) {
+    if (hintsCount <= 0) {
+      wx.showToast({ title: '没有可用提示', icon: 'none' });
+    } else if (currentNumber <= NUMBER_COUNT) {
+      const target = positions.find(p => !p.found && p.number === currentNumber);
+      if (target) {
+        target.found = true;
+        target.circleColor = getRandomCircleColor();
+        target.circlePoints = generateHandDrawnCirclePoints(target.x, target.y, 15);
+        currentNumber++;
+        hintsCount--;
+        if (currentNumber > NUMBER_COUNT) {
+          endGame();
+        }
+        drawGame();
+      }
+    }
+    return; // 已处理提示点击，阻止后续处理
+  }
 
   // 点击游戏区域开始游戏
   if (!gameStarted && y > TOP_BAR_HEIGHT && y < SCREEN_HEIGHT - BOTTOM_BAR_HEIGHT) {
