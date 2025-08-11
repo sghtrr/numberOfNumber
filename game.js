@@ -3,9 +3,10 @@ const windowInfo = wx.getWindowInfo();
 const SCREEN_WIDTH = windowInfo.windowWidth;
 const SCREEN_HEIGHT = windowInfo.windowHeight;
 const TOP_BAR_HEIGHT = 105;
-const BOTTOM_BAR_HEIGHT = 105; // 新增底部留白区域
+const BOTTOM_BAR_HEIGHT = 85; // 新增底部留白区域
 const NUMBER_COUNT = 100;
 const MIN_SPACING = 20; // 数字间最小间距
+const DIVIDER_LINE_WIDTH = 3; // 顶部/底部分割线宽度
 
 let canvas = wx.createCanvas();
 let ctx = canvas.getContext('2d');
@@ -16,6 +17,7 @@ let positions = [];
 let touchTimer = null;
 let backgroundImage = null;
 let customFont = null;
+let hintsIcon = null; // 提示图标
 
 // 加载自定义字体
 const loadCustomFont = () => {
@@ -40,6 +42,16 @@ const loadBackgroundImage = () => {
     drawGame();
   };
   img.src = 'images/bg.jpeg';
+};
+
+// 加载提示图标（左下）
+const loadHintsIcon = () => {
+  const img = wx.createImage();
+  img.onload = () => {
+    hintsIcon = img;
+    drawGame();
+  };
+  img.src = 'icon/hints.png';
 };
 
 // 初始化游戏
@@ -117,8 +129,8 @@ function initGame() {
 // 绘制手绘效果的圆圈
 function generateHandDrawnCirclePoints(x, y, radius) {
   const points = [];
-  for (let i = 0; i < 8; i++) {
-    const angle = i * (Math.PI * 2) / 8;
+  for (let i = 0; i < 16; i++) {
+    const angle = i * (Math.PI * 2) / 16;
     const offset = Math.random() * 3 - 1.5; // ±1.5像素扰动
     points.push({
       x: x + Math.cos(angle) * (radius + offset),
@@ -181,6 +193,7 @@ function drawGame() {
 
   // 绘制顶部分割线
   ctx.strokeStyle = '#1196db';
+  ctx.lineWidth = DIVIDER_LINE_WIDTH;
   ctx.beginPath();
   ctx.moveTo(0, TOP_BAR_HEIGHT - 5);
   ctx.lineTo(SCREEN_WIDTH, TOP_BAR_HEIGHT - 5);
@@ -192,10 +205,21 @@ function drawGame() {
 
   // 绘制底部分割线
   ctx.strokeStyle = '#1196db';
+  ctx.lineWidth = DIVIDER_LINE_WIDTH;
   ctx.beginPath();
   ctx.moveTo(0, SCREEN_HEIGHT - BOTTOM_BAR_HEIGHT + 5);
   ctx.lineTo(SCREEN_WIDTH, SCREEN_HEIGHT - BOTTOM_BAR_HEIGHT + 5);
   ctx.stroke();
+
+  // 绘制提示图标（位于底部留白区域左侧）
+  if (hintsIcon) {
+    console.log("icon绘画")
+    const iconSize = 40; // 图标尺寸
+    const barTop = SCREEN_HEIGHT - BOTTOM_BAR_HEIGHT + 5;
+    const iconX = 30; // 左侧内边距
+    const iconY = barTop + (BOTTOM_BAR_HEIGHT - iconSize) / 2; // 垂直居中
+    ctx.drawImage(hintsIcon, iconX, iconY, iconSize, iconSize);
+  }
 
   // 绘制时间
   const elapsed = gameStarted ? Math.floor((Date.now() - startTime) / 1000) : 0;
@@ -305,7 +329,7 @@ wx.onTouchStart((e) => {
   });
 });
 
-// 初始化游戏
-loadCustomFont(); // 先加载自定义字体
-loadBackgroundImage();
-initGame();
+loadCustomFont(); // 加载自定义字体
+loadBackgroundImage(); // 加载背景图片
+loadHintsIcon();
+initGame(); // 初始化游戏
