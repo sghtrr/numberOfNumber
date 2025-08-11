@@ -58,13 +58,14 @@ function initGame() {
   const availableHeight = SCREEN_HEIGHT - TOP_BAR_HEIGHT - BOTTOM_BAR_HEIGHT;
 
   // 随机生成每行数字数量（6-10之间）
-  const cols = Math.floor(Math.random() * 5) + 6; // 6-10
+  // const cols = Math.floor(Math.random() * 5) + 6; // 6-10
+  const cols = 10;
   const rows = Math.ceil(NUMBER_COUNT / cols);
   const cellWidth = availableWidth / cols;
   const cellHeight = availableHeight / rows;
 
   // 生成随机偏移因子（使每次游戏布局不同）
-  const randomOffsetFactor = Math.random() * 0.3 + 0.7; // 0.7-1.0之间的随机因子
+  const randomOffsetFactor = Math.random() * 0.1 + 0.9; // 0.9-1.0之间的随机因子
 
   // 在网格单元内随机放置数字
   for (let i = 0; i < numbers.length; i++) {
@@ -215,7 +216,7 @@ function drawGame() {
   ctx.fillText(`${currentNumber}`, SCREEN_WIDTH / 2, TOP_BAR_HEIGHT / 1.5);
 
   // 绘制数字
-  ctx.font = `20px "${customFont}"`;
+  ctx.font = `19px "${customFont}"`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
