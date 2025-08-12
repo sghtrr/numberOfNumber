@@ -15,7 +15,6 @@ let currentNumber = 1;
 let gameStarted = false;
 let positions = [];
 let touchTimer = null;
-let backgroundImage = null; // 背景图片
 let customFont = null; // 自定义字体
 let hintsIcon = null; // 提示图标
 let hintsCount = 100; // 提示次数
@@ -31,16 +30,6 @@ const loadCustomFont = () => {
     customFont = 'sans-serif'; // 加载失败的场合使用内置字体
     drawGame();
   }
-};
-
-// 加载背景图片
-const loadBackgroundImage = () => {
-  const img = wx.createImage();
-  img.onload = () => {
-    backgroundImage = img;
-    drawGame();
-  };
-  img.src = 'images/bg.jpeg';
 };
 
 // 加载提示图标
@@ -180,12 +169,28 @@ function drawGame() {
   // 清空画布
   ctx.clearRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-  // 绘制背景图片
-  if (backgroundImage) {
-    ctx.drawImage(backgroundImage, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-  } else {
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  // 绘制白色背景
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+  // 绘制网格背景
+  ctx.strokeStyle = '#0077FF';
+  ctx.lineWidth = 0.3;
+  
+  // 绘制垂直线
+  for (let x = 0; x <= SCREEN_WIDTH; x += 24) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, SCREEN_HEIGHT);
+    ctx.stroke();
+  }
+  
+  // 绘制水平线
+  for (let y = 0; y <= SCREEN_HEIGHT; y += 27) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(SCREEN_WIDTH, y);
+    ctx.stroke();
   }
 
   // 绘制顶部状态栏
@@ -214,7 +219,7 @@ function drawGame() {
 
   // 绘制提示图标
   if (hintsIcon) {
-    const iconSize = 40; // 图标尺寸
+    const iconSize = 45; // 图标尺寸
     const barTop = SCREEN_HEIGHT - BOTTOM_BAR_HEIGHT + 5;
     const iconX = 30; // 左侧内边距
     const iconY = barTop + (BOTTOM_BAR_HEIGHT - iconSize) / 2; // 垂直居中
@@ -372,6 +377,5 @@ wx.onTouchStart((e) => {
 });
 
 loadCustomFont(); // 加载自定义字体
-loadBackgroundImage(); // 加载背景图片
 loadHintsIcon();
 initGame(); // 初始化游戏
