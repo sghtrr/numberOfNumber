@@ -137,11 +137,11 @@ function drawHandDrawnCircle(x, y, color, points, progress = 1) {
 
   ctx.beginPath();
   ctx.moveTo(pts[0].x, pts[0].y);
-  
+
   // 根据进度绘制圆圈
   const totalPoints = pts.length;
   const currentPoints = Math.floor(totalPoints * progress);
-  
+
   for (let i = 1; i <= currentPoints; i++) {
     const prev = pts[i - 1];
     const current = pts[i % totalPoints];
@@ -149,7 +149,7 @@ function drawHandDrawnCircle(x, y, color, points, progress = 1) {
     const cpy = (prev.y + current.y) / 2;
     ctx.quadraticCurveTo(prev.x, prev.y, cpx, cpy);
   }
-  
+
   // 如果进度完成，闭合路径
   if (progress >= 1) {
     ctx.quadraticCurveTo(pts[totalPoints - 1].x, pts[totalPoints - 1].y, pts[0].x, pts[0].y);
@@ -164,15 +164,18 @@ function drawHandDrawnCircle(x, y, color, points, progress = 1) {
 // 添加圆圈动画
 function addCircleAnimation(x, y, color, points) {
   const animation = {
-    x, y, color, points,
+    x,
+    y,
+    color,
+    points,
     progress: 0,
     duration: 500, // 动画持续时间（毫秒）
     startTime: Date.now(),
     completed: false
   };
-  
+
   circleAnimations.push(animation);
-  
+
   // 如果没有动画在运行，开始动画循环
   if (circleAnimations.length === 1) {
     animateCircles();
@@ -183,12 +186,12 @@ function addCircleAnimation(x, y, color, points) {
 function animateCircles() {
   const currentTime = Date.now();
   let hasActiveAnimations = false;
-  
+
   circleAnimations.forEach((anim, index) => {
     if (!anim.completed) {
       const elapsed = currentTime - anim.startTime;
       anim.progress = Math.min(elapsed / anim.duration, 1);
-      
+
       if (anim.progress >= 1) {
         anim.completed = true;
         anim.progress = 1;
@@ -197,10 +200,10 @@ function animateCircles() {
       }
     }
   });
-  
+
   // 重绘游戏界面
   drawGame();
-  
+
   // 如果还有动画在进行，继续循环
   if (hasActiveAnimations) {
     requestAnimationFrame(animateCircles);
@@ -235,7 +238,7 @@ function drawGame() {
   // 绘制网格背景
   ctx.strokeStyle = '#0077FF';
   ctx.lineWidth = 0.3;
-  
+
   // 绘制垂直线
   for (let x = 0; x <= SCREEN_WIDTH; x += 24) {
     ctx.beginPath();
@@ -243,7 +246,7 @@ function drawGame() {
     ctx.lineTo(x, SCREEN_HEIGHT);
     ctx.stroke();
   }
-  
+
   // 绘制水平线
   for (let y = 0; y <= SCREEN_HEIGHT; y += 27) {
     ctx.beginPath();
@@ -285,7 +288,12 @@ function drawGame() {
     ctx.drawImage(hintsIcon, iconX, iconY, iconSize, iconSize);
 
     // 记录图标点击区域用于命中检测
-    hintsIconRect = { x: iconX, y: iconY, width: iconSize, height: iconSize };
+    hintsIconRect = {
+      x: iconX,
+      y: iconY,
+      width: iconSize,
+      height: iconSize
+    };
 
     // 绘制提示次数徽标
     const badgeR = 12;
@@ -331,10 +339,10 @@ function drawGame() {
   positions.forEach(pos => {
     if (pos.found && pos.circleColor) {
       // 查找对应的动画状态
-      const animation = circleAnimations.find(anim => 
+      const animation = circleAnimations.find(anim =>
         anim.x === pos.x && anim.y === pos.y && anim.color === pos.circleColor
       );
-      
+
       if (animation) {
         // 绘制动画中的圆圈
         drawHandDrawnCircle(pos.x, pos.y, pos.circleColor, pos.circlePoints, animation.progress);
@@ -342,7 +350,7 @@ function drawGame() {
         // 绘制完整的圆圈（动画完成或没有动画）
         drawHandDrawnCircle(pos.x, pos.y, pos.circleColor, pos.circlePoints, 1);
       }
-      
+
       // 数字颜色保持不变（黑色）
       ctx.fillStyle = '#333';
       ctx.fillText(pos.number.toString(), pos.x, pos.y);
@@ -387,8 +395,20 @@ wx.onTouchStart((e) => {
   // 点击提示图标：消耗一次提示并圈出当前目标数字
   if (hintsIconRect && x >= hintsIconRect.x && x <= hintsIconRect.x + hintsIconRect.width && y >= hintsIconRect.y && y <= hintsIconRect.y + hintsIconRect.height) {
     if (hintsCount <= 0) {
-      wx.showToast({ title: '没有可用提示', icon: 'none' });
+      wx.showToast({
+        title: '没有可用提示',
+        icon: 'none'
+      });
     } else if (currentNumber <= NUMBER_COUNT) {
+      // 如果游戏还没开始，启动游戏计时
+      if (!gameStarted) {
+        gameStarted = true;
+        startTime = Date.now();
+        touchTimer = setInterval(() => {
+          drawGame();
+        }, 1000);
+      }
+
       const target = positions.find(p => !p.found && p.number === currentNumber);
       if (target) {
         target.found = true;
@@ -397,12 +417,16 @@ wx.onTouchStart((e) => {
         target.circlePoints = generateHandDrawnCirclePoints(target.x, target.y, 15);
         // 添加圆圈动画
         addCircleAnimation(target.x, target.y, target.circleColor, target.circlePoints);
-        currentNumber++;
-        hintsCount--;
-        if (currentNumber > NUMBER_COUNT) {
+
+        // 游戏完成检查（在增加currentNumber之前）
+        if (currentNumber >= NUMBER_COUNT) {
+          // 最后一个数字，直接结束游戏
           endGame();
+        } else {
+          // 不是最后一个数字，继续下一个
+          currentNumber++;
         }
-        // 不需要立即调用 drawGame()，动画会自动重绘
+        hintsCount--;
       }
     }
     return; // 已处理提示点击，阻止后续处理
@@ -437,13 +461,15 @@ wx.onTouchStart((e) => {
           pos.circlePoints = generateHandDrawnCirclePoints(pos.x, pos.y, 15);
           // 添加圆圈动画
           addCircleAnimation(pos.x, pos.y, pos.circleColor, pos.circlePoints);
-          currentNumber++;
 
-          // 游戏完成检查
-          if (currentNumber > NUMBER_COUNT) {
+          // 游戏完成检查（在增加currentNumber之前）
+          if (currentNumber >= NUMBER_COUNT) {
+            // 最后一个数字，直接结束游戏
             endGame();
+          } else {
+            // 不是最后一个数字，继续下一个
+            currentNumber++;
           }
-          // 不需要立即调用 drawGame()，动画会自动重绘
         }
       }
     }
