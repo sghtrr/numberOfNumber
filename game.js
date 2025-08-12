@@ -19,6 +19,7 @@ let customFont = null; // 自定义字体
 let hintsIcon = null; // 提示图标
 let hintsCount = 100; // 提示次数
 let hintsIconRect = null; // 提示图标点击区域
+let circleAnimations = []; // 圆圈动画状态数组
 
 // 加载自定义字体
 const loadCustomFont = () => {
@@ -130,25 +131,83 @@ function generateHandDrawnCirclePoints(x, y, radius) {
 }
 
 // 绘制不同颜色手绘效果的圆圈
-function drawHandDrawnCircle(x, y, color, points) {
+function drawHandDrawnCircle(x, y, color, points, progress = 1) {
   const radius = 15; // 圆圈半径
   const pts = (points && points.length) ? points : generateHandDrawnCirclePoints(x, y, radius);
 
   ctx.beginPath();
   ctx.moveTo(pts[0].x, pts[0].y);
-  for (let i = 1; i < pts.length; i++) {
+  
+  // 根据进度绘制圆圈
+  const totalPoints = pts.length;
+  const currentPoints = Math.floor(totalPoints * progress);
+  
+  for (let i = 1; i <= currentPoints; i++) {
     const prev = pts[i - 1];
-    const current = pts[i];
+    const current = pts[i % totalPoints];
     const cpx = (prev.x + current.x) / 2;
     const cpy = (prev.y + current.y) / 2;
     ctx.quadraticCurveTo(prev.x, prev.y, cpx, cpy);
   }
-  ctx.quadraticCurveTo(pts[pts.length - 1].x, pts[pts.length - 1].y, pts[0].x, pts[0].y);
+  
+  // 如果进度完成，闭合路径
+  if (progress >= 1) {
+    ctx.quadraticCurveTo(pts[totalPoints - 1].x, pts[totalPoints - 1].y, pts[0].x, pts[0].y);
+    ctx.closePath();
+  }
 
-  ctx.closePath();
   ctx.strokeStyle = color;
   ctx.lineWidth = 2.5;
   ctx.stroke();
+}
+
+// 添加圆圈动画
+function addCircleAnimation(x, y, color, points) {
+  const animation = {
+    x, y, color, points,
+    progress: 0,
+    duration: 500, // 动画持续时间（毫秒）
+    startTime: Date.now(),
+    completed: false
+  };
+  
+  circleAnimations.push(animation);
+  
+  // 如果没有动画在运行，开始动画循环
+  if (circleAnimations.length === 1) {
+    animateCircles();
+  }
+}
+
+// 动画循环
+function animateCircles() {
+  const currentTime = Date.now();
+  let hasActiveAnimations = false;
+  
+  circleAnimations.forEach((anim, index) => {
+    if (!anim.completed) {
+      const elapsed = currentTime - anim.startTime;
+      anim.progress = Math.min(elapsed / anim.duration, 1);
+      
+      if (anim.progress >= 1) {
+        anim.completed = true;
+        anim.progress = 1;
+      } else {
+        hasActiveAnimations = true;
+      }
+    }
+  });
+  
+  // 重绘游戏界面
+  drawGame();
+  
+  // 如果还有动画在进行，继续循环
+  if (hasActiveAnimations) {
+    requestAnimationFrame(animateCircles);
+  } else {
+    // 清理已完成的动画
+    circleAnimations = circleAnimations.filter(anim => !anim.completed);
+  }
 }
 
 // 获取随机的圆圈颜色
@@ -271,8 +330,19 @@ function drawGame() {
 
   positions.forEach(pos => {
     if (pos.found && pos.circleColor) {
-      // 先绘制手绘圆圈
-      drawHandDrawnCircle(pos.x, pos.y, pos.circleColor, pos.circlePoints);
+      // 查找对应的动画状态
+      const animation = circleAnimations.find(anim => 
+        anim.x === pos.x && anim.y === pos.y && anim.color === pos.circleColor
+      );
+      
+      if (animation) {
+        // 绘制动画中的圆圈
+        drawHandDrawnCircle(pos.x, pos.y, pos.circleColor, pos.circlePoints, animation.progress);
+      } else {
+        // 绘制完整的圆圈（动画完成或没有动画）
+        drawHandDrawnCircle(pos.x, pos.y, pos.circleColor, pos.circlePoints, 1);
+      }
+      
       // 数字颜色保持不变（黑色）
       ctx.fillStyle = '#333';
       ctx.fillText(pos.number.toString(), pos.x, pos.y);
@@ -323,13 +393,16 @@ wx.onTouchStart((e) => {
       if (target) {
         target.found = true;
         target.circleColor = getRandomCircleColor();
+        // 点击时生成并缓存手绘圆圈点，避免后续重绘抖动
         target.circlePoints = generateHandDrawnCirclePoints(target.x, target.y, 15);
+        // 添加圆圈动画
+        addCircleAnimation(target.x, target.y, target.circleColor, target.circlePoints);
         currentNumber++;
         hintsCount--;
         if (currentNumber > NUMBER_COUNT) {
           endGame();
         }
-        drawGame();
+        // 不需要立即调用 drawGame()，动画会自动重绘
       }
     }
     return; // 已处理提示点击，阻止后续处理
@@ -362,14 +435,15 @@ wx.onTouchStart((e) => {
           pos.circleColor = getRandomCircleColor();
           // 点击时生成并缓存手绘圆圈点，避免后续重绘抖动
           pos.circlePoints = generateHandDrawnCirclePoints(pos.x, pos.y, 15);
+          // 添加圆圈动画
+          addCircleAnimation(pos.x, pos.y, pos.circleColor, pos.circlePoints);
           currentNumber++;
 
           // 游戏完成检查
           if (currentNumber > NUMBER_COUNT) {
             endGame();
           }
-
-          drawGame();
+          // 不需要立即调用 drawGame()，动画会自动重绘
         }
       }
     }
