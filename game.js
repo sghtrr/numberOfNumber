@@ -8,8 +8,17 @@ const NUMBER_COUNT = 100;
 const MIN_SPACING = 20; // 数字间最小间距
 const DIVIDER_LINE_WIDTH = 3; // 顶部/底部分割线宽度
 
+// 游戏状态枚举
+const GAME_STATE = {
+  MAIN_MENU: 'main_menu',    // 主页
+  SINGLE_PLAYER: 'single_player', // 单机游戏
+  MULTI_PLAYER: 'multi_player',     // 联机比赛
+  FRIEND_BATTLE: 'friend_battle'  // 好友对决
+};
+
 let canvas = wx.createCanvas();
 let ctx = canvas.getContext('2d');
+let currentGameState = GAME_STATE.MAIN_MENU; // 当前游戏状态
 let startTime = 0;
 let currentNumber = 1;
 let gameStarted = false;
@@ -20,16 +29,27 @@ let hintsIcon = null; // 提示图标
 let hintsCount = 100; // 提示次数
 let hintsIconRect = null; // 提示图标点击区域
 let circleAnimations = []; // 圆圈动画状态数组
+let mainMenuButtons = []; // 主页按钮区域
 
 // 加载自定义字体
 const loadCustomFont = () => {
   try {
     const family = wx.loadFont('font/caveat/caveatbrush-regular.ttf'); // 返回可用的字体族名
     customFont = family || 'sans-serif'; // 字体族名返回失败的场合使用内置字体
-    drawGame();
+    // 主页的场合
+    if (currentGameState === GAME_STATE.MAIN_MENU) {
+      drawMainMenu();
+    } else {
+      drawGame();
+    }
   } catch (err) {
     customFont = 'sans-serif'; // 加载失败的场合使用内置字体
-    drawGame();
+    // 主页的场合
+    if (currentGameState === GAME_STATE.MAIN_MENU) {
+      drawMainMenu();
+    } else {
+      drawGame();
+    }
   }
 };
 
@@ -38,10 +58,129 @@ const loadHintsIcon = () => {
   const img = wx.createImage();
   img.onload = () => {
     hintsIcon = img;
-    drawGame();
+    // 主页的场合
+    if (currentGameState === GAME_STATE.MAIN_MENU) {
+      drawMainMenu();
+    } else {
+      drawGame();
+    }
   };
   img.src = 'icon/hints.png';
 };
+
+// 初始化主页按钮
+function initMainMenu() {
+  const buttonHeight = 80;
+  const buttonSpacing = 30;
+  const totalHeight = buttonHeight * 3 + buttonSpacing * 2;
+  const startY = (SCREEN_HEIGHT - totalHeight) / 2;
+  
+  mainMenuButtons = [
+    {
+      text: '单机游戏',
+      x: SCREEN_WIDTH / 2,
+      y: startY,
+      width: 200,
+      height: buttonHeight,
+      action: () => startSinglePlayer()
+    },
+    {
+      text: '联机比赛',
+      x: SCREEN_WIDTH / 2,
+      y: startY + buttonHeight + buttonSpacing,
+      width: 200,
+      height: buttonHeight,
+      action: () => startMultiplayer()
+    },
+    {
+      text: '好友对决',
+      x: SCREEN_WIDTH / 2,
+      y: startY + (buttonHeight + buttonSpacing) * 2,
+      width: 200,
+      height: buttonHeight,
+      action: () => startFriendBattle()
+    }
+  ];
+}
+
+// 绘制主页
+function drawMainMenu() {
+  // 清空画布
+  ctx.clearRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  
+  // 绘制白色背景
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  
+  // 绘制标题
+  ctx.font = `bold 48px "${customFont}"`;
+  ctx.fillStyle = '#333';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('数字找茬', SCREEN_WIDTH / 2, SCREEN_HEIGHT / 4);
+  
+  // 绘制按钮
+  mainMenuButtons.forEach(button => {
+    // 按钮背景
+    ctx.fillStyle = '#0077FF';
+    ctx.fillRect(button.x - button.width / 2, button.y - button.height / 2, button.width, button.height);
+    
+    // 按钮文字
+    ctx.font = `bold 24px "${customFont}"`;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(button.text, button.x, button.y);
+  });
+}
+
+// 启动单机游戏
+function startSinglePlayer() {
+  currentGameState = GAME_STATE.SINGLE_PLAYER;
+  initGame();
+}
+
+// 启动联机比赛
+function startMultiplayer() {
+  wx.showToast({
+    title: '联机比赛功能开发中',
+    icon: 'none'
+  });
+}
+
+// 启动好友对决
+function startFriendBattle() {
+  wx.showToast({
+    title: '好友对决功能开发中',
+    icon: 'none'
+  });
+}
+
+// 返回主页
+function returnToMainMenu() {
+  currentGameState = GAME_STATE.MAIN_MENU;
+  // 重置游戏状态
+  gameStarted = false;
+  currentNumber = 1;
+  positions = [];
+  if (touchTimer) {
+    clearInterval(touchTimer);
+    touchTimer = null;
+  }
+  circleAnimations = [];
+  drawMainMenu();
+}
+
+// 调用震动反馈
+function triggerVibration() {
+  try {
+    wx.vibrateShort({
+      type: 'light' // 轻微震动
+    });
+  } catch (err) {
+    console.log('震动功能不可用:', err);
+  }
+}
 
 // 初始化游戏
 function initGame() {
@@ -373,7 +512,18 @@ function endGame() {
   wx.showModal({
     title: '游戏完成',
     content: `恭喜你完成了游戏！用时: ${minutes}分${seconds}秒`,
-    showCancel: false
+    showCancel: true,
+    cancelText: '返回主页',
+    confirmText: '再玩一次',
+    success: (res) => {
+      if (res.confirm) {
+        // 重新开始游戏
+        initGame();
+      } else {
+        // 返回主页
+        returnToMainMenu();
+      }
+    }
   });
 }
 
@@ -392,6 +542,33 @@ wx.onTouchStart((e) => {
   const x = touch.clientX;
   const y = touch.clientY;
 
+  // 根据当前游戏状态处理触摸事件
+  switch (currentGameState) {
+    case GAME_STATE.MAIN_MENU:
+      handleMainMenuTouch(x, y);
+      break;
+    case GAME_STATE.SINGLE_PLAYER:
+      handleSinglePlayerTouch(x, y);
+      break;
+    default:
+      break;
+  }
+});
+
+// 处理主页触摸事件
+function handleMainMenuTouch(x, y) {
+  mainMenuButtons.forEach(button => {
+    if (x >= button.x - button.width / 2 && 
+        x <= button.x + button.width / 2 && 
+        y >= button.y - button.height / 2 && 
+        y <= button.y + button.height / 2) {
+      button.action();
+    }
+  });
+}
+
+// 处理单机游戏触摸事件
+function handleSinglePlayerTouch(x, y) {
   // 点击提示图标：消耗一次提示并圈出当前目标数字
   if (hintsIconRect && x >= hintsIconRect.x && x <= hintsIconRect.x + hintsIconRect.width && y >= hintsIconRect.y && y <= hintsIconRect.y + hintsIconRect.height) {
     if (hintsCount <= 0) {
@@ -408,7 +585,7 @@ wx.onTouchStart((e) => {
           drawGame();
         }, 1000);
       }
-
+      
       const target = positions.find(p => !p.found && p.number === currentNumber);
       if (target) {
         target.found = true;
@@ -417,7 +594,7 @@ wx.onTouchStart((e) => {
         target.circlePoints = generateHandDrawnCirclePoints(target.x, target.y, 15);
         // 添加圆圈动画
         addCircleAnimation(target.x, target.y, target.circleColor, target.circlePoints);
-
+        
         // 游戏完成检查（在增加currentNumber之前）
         if (currentNumber >= NUMBER_COUNT) {
           // 最后一个数字，直接结束游戏
@@ -454,6 +631,9 @@ wx.onTouchStart((e) => {
       // 如果点击点在数字范围内
       if (distance < touchRadius) {
         if (pos.number === currentNumber) {
+          // 触发震动反馈
+          triggerVibration();
+          
           pos.found = true;
           // 为每个数字分配一个随机的圆圈颜色
           pos.circleColor = getRandomCircleColor();
@@ -461,7 +641,7 @@ wx.onTouchStart((e) => {
           pos.circlePoints = generateHandDrawnCirclePoints(pos.x, pos.y, 15);
           // 添加圆圈动画
           addCircleAnimation(pos.x, pos.y, pos.circleColor, pos.circlePoints);
-
+          
           // 游戏完成检查（在增加currentNumber之前）
           if (currentNumber >= NUMBER_COUNT) {
             // 最后一个数字，直接结束游戏
@@ -474,8 +654,9 @@ wx.onTouchStart((e) => {
       }
     }
   });
-});
+}
 
 loadCustomFont(); // 加载自定义字体
 loadHintsIcon();
-initGame(); // 初始化游戏
+initMainMenu(); // 初始化主页
+drawMainMenu(); // 绘制主页
