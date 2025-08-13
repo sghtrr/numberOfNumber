@@ -112,12 +112,21 @@ function drawMainMenu() {
   ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
   
+  // 计算标题位置，确保不与按钮重叠
+  const buttonHeight = 80;
+  const buttonSpacing = 30;
+  const totalHeight = buttonHeight * 3 + buttonSpacing * 2;
+  const startY = (SCREEN_HEIGHT - totalHeight) / 2;
+  
+  // 标题位置在按钮上方，留出足够间距
+  const titleY = startY - 80; // 在第一个按钮上方80像素
+  
   // 绘制标题
   ctx.font = `bold 48px "${customFont}"`;
   ctx.fillStyle = '#333';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('数字找茬', SCREEN_WIDTH / 2, SCREEN_HEIGHT / 4);
+  ctx.fillText('数字找茬', SCREEN_WIDTH / 2, titleY);
   
   // 绘制按钮
   mainMenuButtons.forEach(button => {
@@ -184,6 +193,20 @@ function triggerVibration() {
 
 // 初始化游戏
 function initGame() {
+  // 重置所有游戏状态变量
+  currentNumber = 1;
+  gameStarted = false;
+  startTime = 0;
+  hintsCount = 100;
+  positions = [];
+  circleAnimations = [];
+  
+  // 清除之前的定时器
+  if (touchTimer) {
+    clearInterval(touchTimer);
+    touchTimer = null;
+  }
+
   // 生成1-100的有序数组
   const unShufflednumbers = Array.from({
     length: NUMBER_COUNT
@@ -571,6 +594,9 @@ function handleMainMenuTouch(x, y) {
 function handleSinglePlayerTouch(x, y) {
   // 点击提示图标：消耗一次提示并圈出当前目标数字
   if (hintsIconRect && x >= hintsIconRect.x && x <= hintsIconRect.x + hintsIconRect.width && y >= hintsIconRect.y && y <= hintsIconRect.y + hintsIconRect.height) {
+    // 触发震动反馈
+    triggerVibration();
+    
     if (hintsCount <= 0) {
       wx.showToast({
         title: '没有可用提示',
