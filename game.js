@@ -32,6 +32,7 @@ let circleAnimations = []; // 圆圈动画状态数组
 let mainMenuButtons = []; // 主页按钮区域
 let restartIcon = null; // 重新开始图标
 let restartIconRect = null; // 重新开始图标点击区域
+let goalIcon = null; // 目标数字提示图标
 
 // 加载自定义字体
 const loadCustomFont = () => {
@@ -83,6 +84,21 @@ const loadRestartIcon = () => {
     }
   };
   img.src = 'icon/restart.png';
+};
+
+// 加载目标数字提示图标
+const loadGoalIcon = () => {
+  const img = wx.createImage();
+  img.onload = () => {
+    goalIcon = img;
+    // 主页的场合
+    if (currentGameState === GAME_STATE.MAIN_MENU) {
+      drawMainMenu();
+    } else {
+      drawGame();
+    }
+  };
+  img.src = 'icon/goal.png';
 };
 
 // 初始化主页按钮
@@ -142,7 +158,7 @@ function drawMainMenu() {
   ctx.fillStyle = '#333';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('数字找茬', SCREEN_WIDTH / 2, titleY);
+  ctx.fillText('数了还数', SCREEN_WIDTH / 2, titleY);
 
   // 绘制按钮
   mainMenuButtons.forEach(button => {
@@ -463,7 +479,7 @@ function drawGame() {
     const iconX = 30; // 左侧内边距
     const iconY = barTop + (BOTTOM_BAR_HEIGHT - iconSize) / 2; // 垂直居中
 
-    // 绘制淡粉色圆形背景
+    // 绘制蓝色圆形背景
     const bgRadius = iconSize / 2 + 8;
     const bgX = iconX + iconSize / 2;
     const bgY = iconY + iconSize / 2;
@@ -556,8 +572,17 @@ function drawGame() {
   ctx.fillText(timeStr, 15, TOP_BAR_HEIGHT / 1.5);
 
   // 绘制下一个要选择的数字
-  ctx.font = `bold 30px "${customFont}"`;
+  ctx.font = `bold 35px "${customFont}"`;
   ctx.textAlign = 'center';
+  
+  // 绘制目标数字提示图标
+  if (goalIcon) {
+    const iconSize = 30; // 图标尺寸
+    const iconX = SCREEN_WIDTH / 2 - 50; // 数字左侧，留出间距
+    const iconY = TOP_BAR_HEIGHT / 1.5 - iconSize / 2; // 与数字垂直对齐
+    ctx.drawImage(goalIcon, iconX, iconY, iconSize, iconSize);
+  }
+  
   ctx.fillText(`${currentNumber}`, SCREEN_WIDTH / 2, TOP_BAR_HEIGHT / 1.5);
 
   // 绘制数字
@@ -773,5 +798,6 @@ function handleSinglePlayerTouch(x, y) {
 loadCustomFont(); // 加载自定义字体
 loadHintsIcon();
 loadRestartIcon();
+loadGoalIcon();
 initMainMenu(); // 初始化主页
 drawMainMenu(); // 绘制主页
