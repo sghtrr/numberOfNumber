@@ -10,10 +10,10 @@ const DIVIDER_LINE_WIDTH = 3; // 顶部/底部分割线宽度
 
 // 游戏状态枚举
 const GAME_STATE = {
-  MAIN_MENU: 'main_menu',    // 主页
+  MAIN_MENU: 'main_menu', // 主页
   SINGLE_PLAYER: 'single_player', // 单机游戏
-  MULTI_PLAYER: 'multi_player',     // 联机比赛
-  FRIEND_BATTLE: 'friend_battle'  // 好友对决
+  MULTI_PLAYER: 'multi_player', // 联机比赛
+  FRIEND_BATTLE: 'friend_battle' // 好友对决
 };
 
 let canvas = wx.createCanvas();
@@ -65,7 +65,7 @@ const loadHintsIcon = () => {
       drawGame();
     }
   };
-  img.src = 'icon/hints.png';
+  img.src = 'icon/hints2.png';
 };
 
 // 初始化主页按钮
@@ -74,9 +74,8 @@ function initMainMenu() {
   const buttonSpacing = 30;
   const totalHeight = buttonHeight * 3 + buttonSpacing * 2;
   const startY = (SCREEN_HEIGHT - totalHeight) / 2;
-  
-  mainMenuButtons = [
-    {
+
+  mainMenuButtons = [{
       text: '单机游戏',
       x: SCREEN_WIDTH / 2,
       y: startY,
@@ -107,33 +106,33 @@ function initMainMenu() {
 function drawMainMenu() {
   // 清空画布
   ctx.clearRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-  
+
   // 绘制白色背景
   ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-  
+
   // 计算标题位置，确保不与按钮重叠
   const buttonHeight = 80;
   const buttonSpacing = 30;
   const totalHeight = buttonHeight * 3 + buttonSpacing * 2;
   const startY = (SCREEN_HEIGHT - totalHeight) / 2;
-  
+
   // 标题位置在按钮上方，留出足够间距
   const titleY = startY - 80; // 在第一个按钮上方80像素
-  
+
   // 绘制标题
   ctx.font = `bold 48px "${customFont}"`;
   ctx.fillStyle = '#333';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('数字找茬', SCREEN_WIDTH / 2, titleY);
-  
+
   // 绘制按钮
   mainMenuButtons.forEach(button => {
     // 按钮背景
     ctx.fillStyle = '#0077FF';
     ctx.fillRect(button.x - button.width / 2, button.y - button.height / 2, button.width, button.height);
-    
+
     // 按钮文字
     ctx.font = `bold 24px "${customFont}"`;
     ctx.fillStyle = '#FFFFFF';
@@ -197,10 +196,9 @@ function initGame() {
   currentNumber = 1;
   gameStarted = false;
   startTime = 0;
-  hintsCount = 100;
   positions = [];
   circleAnimations = [];
-  
+
   // 清除之前的定时器
   if (touchTimer) {
     clearInterval(touchTimer);
@@ -443,34 +441,55 @@ function drawGame() {
 
   // 绘制提示图标
   if (hintsIcon) {
-    const iconSize = 45; // 图标尺寸
+    const iconSize = 35; // 图标尺寸
     const barTop = SCREEN_HEIGHT - BOTTOM_BAR_HEIGHT + 5;
     const iconX = 30; // 左侧内边距
     const iconY = barTop + (BOTTOM_BAR_HEIGHT - iconSize) / 2; // 垂直居中
+
+    // 绘制淡粉色圆形背景
+    const bgRadius = iconSize / 2 + 8;
+    const bgX = iconX + iconSize / 2;
+    const bgY = iconY + iconSize / 2;
+    ctx.beginPath();
+    ctx.arc(bgX, bgY, bgRadius, 0, Math.PI * 2);
+    ctx.fillStyle = '#3F48CC';
+    ctx.fill();
+
+    // 绘制提示图标
     ctx.drawImage(hintsIcon, iconX, iconY, iconSize, iconSize);
 
-    // 记录图标点击区域用于命中检测
+    // 记录图标点击区域用于命中检测（使用背景圆的区域）
     hintsIconRect = {
-      x: iconX,
-      y: iconY,
-      width: iconSize,
-      height: iconSize
+      x: bgX - bgRadius,
+      y: bgY - bgRadius,
+      width: bgRadius * 2,
+      height: bgRadius * 2
     };
 
-    // 绘制提示次数徽标
+    // 绘制提示次数徽标（位于背景圆右上角）
     const badgeR = 12;
-    const badgeCx = iconX + iconSize - badgeR + 3;
-    const badgeCy = iconY + 4;
+    const badgeCx = bgX + bgRadius - badgeR + 3; // 背景圆右上角
+    const badgeCy = bgY - bgRadius + 4; // 背景圆右上角
+    
     ctx.beginPath();
     ctx.arc(badgeCx, badgeCy, badgeR, 0, Math.PI * 2);
     ctx.fillStyle = '#FF4D4F';
     ctx.fill();
 
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = `14px "${customFont}"`;
+    ctx.font = `12px "${customFont}"`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(String(hintsCount), badgeCx, badgeCy);
+    
+    // 显示提示次数，超过99时显示99+
+    let displayText;
+    if (hintsCount > 99) {
+      displayText = '99+';
+    } else {
+      displayText = String(hintsCount);
+    }
+    
+    ctx.fillText(displayText, badgeCx, badgeCy);
   } else {
     // 图标未就绪时不响应点击
     hintsIconRect = null;
@@ -581,10 +600,10 @@ wx.onTouchStart((e) => {
 // 处理主页触摸事件
 function handleMainMenuTouch(x, y) {
   mainMenuButtons.forEach(button => {
-    if (x >= button.x - button.width / 2 && 
-        x <= button.x + button.width / 2 && 
-        y >= button.y - button.height / 2 && 
-        y <= button.y + button.height / 2) {
+    if (x >= button.x - button.width / 2 &&
+      x <= button.x + button.width / 2 &&
+      y >= button.y - button.height / 2 &&
+      y <= button.y + button.height / 2) {
       button.action();
     }
   });
@@ -596,7 +615,7 @@ function handleSinglePlayerTouch(x, y) {
   if (hintsIconRect && x >= hintsIconRect.x && x <= hintsIconRect.x + hintsIconRect.width && y >= hintsIconRect.y && y <= hintsIconRect.y + hintsIconRect.height) {
     // 触发震动反馈
     triggerVibration();
-    
+
     if (hintsCount <= 0) {
       wx.showToast({
         title: '没有可用提示',
@@ -611,7 +630,7 @@ function handleSinglePlayerTouch(x, y) {
           drawGame();
         }, 1000);
       }
-      
+
       const target = positions.find(p => !p.found && p.number === currentNumber);
       if (target) {
         target.found = true;
@@ -620,7 +639,7 @@ function handleSinglePlayerTouch(x, y) {
         target.circlePoints = generateHandDrawnCirclePoints(target.x, target.y, 15);
         // 添加圆圈动画
         addCircleAnimation(target.x, target.y, target.circleColor, target.circlePoints);
-        
+
         // 游戏完成检查（在增加currentNumber之前）
         if (currentNumber >= NUMBER_COUNT) {
           // 最后一个数字，直接结束游戏
@@ -659,7 +678,7 @@ function handleSinglePlayerTouch(x, y) {
         if (pos.number === currentNumber) {
           // 触发震动反馈
           triggerVibration();
-          
+
           pos.found = true;
           // 为每个数字分配一个随机的圆圈颜色
           pos.circleColor = getRandomCircleColor();
@@ -667,7 +686,7 @@ function handleSinglePlayerTouch(x, y) {
           pos.circlePoints = generateHandDrawnCirclePoints(pos.x, pos.y, 15);
           // 添加圆圈动画
           addCircleAnimation(pos.x, pos.y, pos.circleColor, pos.circlePoints);
-          
+
           // 游戏完成检查（在增加currentNumber之前）
           if (currentNumber >= NUMBER_COUNT) {
             // 最后一个数字，直接结束游戏
