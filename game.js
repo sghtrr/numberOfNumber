@@ -30,6 +30,8 @@ let hintsCount = 100; // 提示次数
 let hintsIconRect = null; // 提示图标点击区域
 let circleAnimations = []; // 圆圈动画状态数组
 let mainMenuButtons = []; // 主页按钮区域
+let restartIcon = null; // 重新开始图标
+let restartIconRect = null; // 重新开始图标点击区域
 
 // 加载自定义字体
 const loadCustomFont = () => {
@@ -65,7 +67,22 @@ const loadHintsIcon = () => {
       drawGame();
     }
   };
-  img.src = 'icon/hints2.png';
+  img.src = 'icon/hints.png';
+};
+
+// 加载重新开始图标
+const loadRestartIcon = () => {
+  const img = wx.createImage();
+  img.onload = () => {
+    restartIcon = img;
+    // 主页的场合
+    if (currentGameState === GAME_STATE.MAIN_MENU) {
+      drawMainMenu();
+    } else {
+      drawGame();
+    }
+  };
+  img.src = 'icon/restart.png';
 };
 
 // 初始化主页按钮
@@ -495,6 +512,37 @@ function drawGame() {
     hintsIconRect = null;
   }
 
+  // 绘制重新开始按钮
+  if (restartIcon) {
+    const iconSize = 35; // 图标尺寸
+    const barTop = SCREEN_HEIGHT - BOTTOM_BAR_HEIGHT + 5;
+    const iconX = 120; // 提示图标右侧，留出间距
+    const iconY = barTop + (BOTTOM_BAR_HEIGHT - iconSize) / 2; // 垂直居中
+
+    // 绘制圆形背景
+    const bgRadius = iconSize / 2 + 8;
+    const bgX = iconX + iconSize / 2;
+    const bgY = iconY + iconSize / 2;
+    ctx.beginPath();
+    ctx.arc(bgX, bgY, bgRadius, 0, Math.PI * 2);
+    ctx.fillStyle = '#FF6B35'; // 橙色背景
+    ctx.fill();
+
+    // 绘制重新开始图标
+    ctx.drawImage(restartIcon, iconX, iconY, iconSize, iconSize);
+
+    // 记录图标点击区域用于命中检测（使用背景圆的区域）
+    restartIconRect = {
+      x: bgX - bgRadius,
+      y: bgY - bgRadius,
+      width: bgRadius * 2,
+      height: bgRadius * 2
+    };
+  } else {
+    // 图标未就绪时不响应点击
+    restartIconRect = null;
+  }
+
   // 绘制时间
   const elapsed = gameStarted ? Math.floor((Date.now() - startTime) / 1000) : 0;
   const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
@@ -611,6 +659,27 @@ function handleMainMenuTouch(x, y) {
 
 // 处理单机游戏触摸事件
 function handleSinglePlayerTouch(x, y) {
+  // 点击重新开始按钮
+  if (restartIconRect && x >= restartIconRect.x && x <= restartIconRect.x + restartIconRect.width && y >= restartIconRect.y && y <= restartIconRect.y + restartIconRect.height) {
+    // 触发震动反馈
+    triggerVibration();
+    
+    wx.showModal({
+      title: '重新开始',
+      content: '确定要重新开始游戏吗？当前进度将丢失。',
+      showCancel: true,
+      cancelText: '取消',
+      confirmText: '确定',
+      success: (res) => {
+        if (res.confirm) {
+          // 确认重新开始游戏
+          initGame();
+        }
+      }
+    });
+    return; // 已处理重新开始点击，阻止后续处理
+  }
+
   // 点击提示图标：消耗一次提示并圈出当前目标数字
   if (hintsIconRect && x >= hintsIconRect.x && x <= hintsIconRect.x + hintsIconRect.width && y >= hintsIconRect.y && y <= hintsIconRect.y + hintsIconRect.height) {
     // 触发震动反馈
@@ -703,5 +772,6 @@ function handleSinglePlayerTouch(x, y) {
 
 loadCustomFont(); // 加载自定义字体
 loadHintsIcon();
+loadRestartIcon();
 initMainMenu(); // 初始化主页
 drawMainMenu(); // 绘制主页
