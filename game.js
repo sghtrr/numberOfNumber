@@ -37,17 +37,15 @@ let goalIcon = null; // 目标数字提示图标
 // 加载自定义字体
 const loadCustomFont = () => {
   try {
-    const family = wx.loadFont('font/caveat/caveatbrush-regular.ttf'); // 返回可用的字体族名
-    customFont = family || 'sans-serif'; // 字体族名返回失败的场合使用内置字体
-    // 主页的场合
+    const family = wx.loadFont('font/caveat/caveatbrush-regular.ttf');
+    customFont = family || 'sans-serif'; // 字体名返回失败的场合使用内置字体
     if (currentGameState === GAME_STATE.MAIN_MENU) {
       drawMainMenu();
     } else {
       drawGame();
     }
   } catch (err) {
-    customFont = 'sans-serif'; // 加载失败的场合使用内置字体
-    // 主页的场合
+    customFont = 'sans-serif';
     if (currentGameState === GAME_STATE.MAIN_MENU) {
       drawMainMenu();
     } else {
@@ -61,7 +59,6 @@ const loadHintsIcon = () => {
   const img = wx.createImage();
   img.onload = () => {
     hintsIcon = img;
-    // 主页的场合
     if (currentGameState === GAME_STATE.MAIN_MENU) {
       drawMainMenu();
     } else {
@@ -76,7 +73,6 @@ const loadRestartIcon = () => {
   const img = wx.createImage();
   img.onload = () => {
     restartIcon = img;
-    // 主页的场合
     if (currentGameState === GAME_STATE.MAIN_MENU) {
       drawMainMenu();
     } else {
@@ -91,7 +87,6 @@ const loadGoalIcon = () => {
   const img = wx.createImage();
   img.onload = () => {
     goalIcon = img;
-    // 主页的场合
     if (currentGameState === GAME_STATE.MAIN_MENU) {
       drawMainMenu();
     } else {
@@ -137,20 +132,17 @@ function initMainMenu() {
 
 // 绘制主页
 function drawMainMenu() {
-  // 清空画布
   ctx.clearRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
   // 绘制白色背景
   ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-  // 计算标题位置，确保不与按钮重叠
   const buttonHeight = 80;
   const buttonSpacing = 30;
   const totalHeight = buttonHeight * 3 + buttonSpacing * 2;
   const startY = (SCREEN_HEIGHT - totalHeight) / 2;
 
-  // 标题位置在按钮上方，留出足够间距
   const titleY = startY - 80; // 在第一个按钮上方80像素
 
   // 绘制标题
@@ -421,7 +413,6 @@ function getRandomCircleColor() {
 
 // 绘制游戏界面
 function drawGame() {
-  // 清空画布
   ctx.clearRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
   // 绘制白色背景
@@ -541,7 +532,7 @@ function drawGame() {
     const bgY = iconY + iconSize / 2;
     ctx.beginPath();
     ctx.arc(bgX, bgY, bgRadius, 0, Math.PI * 2);
-    ctx.fillStyle = '#FF6B35'; // 橙色背景
+    ctx.fillStyle = '#3F48CC';
     ctx.fill();
 
     // 绘制重新开始图标
