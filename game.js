@@ -3,7 +3,7 @@ const windowInfo = wx.getWindowInfo();
 const SCREEN_WIDTH = windowInfo.windowWidth;
 const SCREEN_HEIGHT = windowInfo.windowHeight;
 const TOP_BAR_HEIGHT = 105; // 顶部留白区域
-const BOTTOM_BAR_HEIGHT = 85; // 底部留白区域
+const BOTTOM_BAR_HEIGHT = 95; // 底部留白区域
 const NUMBER_COUNT = 100;
 const MIN_SPACING = 20; // 数字间最小间距
 const DIVIDER_LINE_WIDTH = 3; // 顶部/底部分割线宽度
@@ -467,7 +467,7 @@ function drawGame() {
     ctx.fill();
 
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = `bold 14px "${customFont}"`;
+    ctx.font = `14px "${customFont}"`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(String(hintsCount), badgeCx, badgeCy);
@@ -489,7 +489,7 @@ function drawGame() {
   ctx.fillText(timeStr, 15, TOP_BAR_HEIGHT / 1.5);
 
   // 绘制下一个要选择的数字
-  ctx.font = `bold 28px "${customFont}"`;
+  ctx.font = `bold 30px "${customFont}"`;
   ctx.textAlign = 'center';
   ctx.fillText(`${currentNumber}`, SCREEN_WIDTH / 2, TOP_BAR_HEIGHT / 1.5);
 
