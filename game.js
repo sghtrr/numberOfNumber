@@ -503,7 +503,7 @@ function drawGame() {
     const badgeR = 12;
     const badgeCx = bgX + bgRadius - badgeR + 3; // 背景圆右上角
     const badgeCy = bgY - bgRadius + 4; // 背景圆右上角
-    
+
     ctx.beginPath();
     ctx.arc(badgeCx, badgeCy, badgeR, 0, Math.PI * 2);
     ctx.fillStyle = '#FF4D4F';
@@ -513,7 +513,7 @@ function drawGame() {
     ctx.font = `12px "${customFont}"`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    
+
     // 显示提示次数，超过99时显示99+
     let displayText;
     if (hintsCount > 99) {
@@ -521,7 +521,7 @@ function drawGame() {
     } else {
       displayText = String(hintsCount);
     }
-    
+
     ctx.fillText(displayText, badgeCx, badgeCy);
   } else {
     // 图标未就绪时不响应点击
@@ -574,7 +574,7 @@ function drawGame() {
   // 绘制下一个要选择的数字
   ctx.font = `bold 35px "${customFont}"`;
   ctx.textAlign = 'center';
-  
+
   // 绘制目标数字提示图标
   if (goalIcon) {
     const iconSize = 30; // 图标尺寸
@@ -582,7 +582,7 @@ function drawGame() {
     const iconY = TOP_BAR_HEIGHT / 1.5 - iconSize / 2; // 与数字垂直对齐
     ctx.drawImage(goalIcon, iconX, iconY, iconSize, iconSize);
   }
-  
+
   ctx.fillText(`${currentNumber}`, SCREEN_WIDTH / 2, TOP_BAR_HEIGHT / 1.5);
 
   // 绘制数字
@@ -688,7 +688,7 @@ function handleSinglePlayerTouch(x, y) {
   if (restartIconRect && x >= restartIconRect.x && x <= restartIconRect.x + restartIconRect.width && y >= restartIconRect.y && y <= restartIconRect.y + restartIconRect.height) {
     // 触发震动反馈
     triggerVibration();
-    
+
     wx.showModal({
       title: '重新开始',
       content: '确定要重新开始游戏吗？当前进度将丢失。',
